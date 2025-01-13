@@ -6,7 +6,7 @@ It can be used as a reference and basis for other computational analyses of larg
 
 We have validated our pipeline in two analyses of age- and sex-associated immunophenotype changes across 2089 donors, focusing on B-cell and T- & NK-cell flow data from peripheral blood, measured in 15 batches.
 
-<center>![overview](./overview.png)</center>
+<img src="./overview.png" alt="overview" width="900"/>
 ***Overview of the computational pipeline.*** ***1.*** *FCS inputs and associated metadata are gathered.* ***2.*** *Data is pre-processed to obtain clean protein expression signal with minimal amount of batch effect.* ***3.*** *A clustering model is trained to partition data into subsets and extract salient features per subset, sample and marker.* ***4.*** *A battery of adapted parametric tests is used to model differential abundance and state of cell subsets based on sample-level biological predictors.*
 
 <details>
@@ -580,7 +580,7 @@ Results of feature extraction, outlier and noise detection, statistical modellin
 
 A brief user guide for the dashboard is shown below.
 
-<center>![dashboard_guide](./dashboard_guide.png)</center>
+<img src="./dashboard_guide.png" alt="dashboard_guide" width="900"/>
 
 #### Outputs
 
@@ -620,5 +620,5 @@ Once a pipeline has been executed, the best way to share results is via the inte
 The recipient then needs to source `06_Dashboard.R` in RStudio to launch the dashboard.
 **To publish results**, deploy your analysis dashboard as a Shiny app: more information [here](https://shiny.posit.co/r/deploy.html).
 
-<center>![dashboard](./dashboard.png)</center>
+<img src="./dashboard.png" alt="dashboard_screenshot" width="900"/>
 ***Screenshot of dashboard with results.*** *Analysis results are presented in an interactive dashboard. This allows the user to browse through all results and filter them by experimental designs, significance effect size, cell subsets and markers of interest and robustness against noise. Selected results can be exported and easily traced to original expression data for verification.*
