@@ -13,6 +13,7 @@ We have validated our pipeline in two analyses of age- and sex-associated immuno
 <details>
 <summary><b>Differential expression modelling background</b>: investigating changes in phenotype by condition 👩‍🔬</summary>
 
+<br>
 DE modelling is a standard approach to the exploration of multi-sample cohorts of cytometry and other single-cell data.
 The task is to **model phenotype changes in patient or donor samples in association with biological correlates**, such as age, sex, diagnosis or serostatus.
 Over the past decade, a number of semi-supervised computational approaches have emerged in this field as important drivers of biological discovery.
@@ -30,6 +31,7 @@ Some important tools include
 <details>
 <summary><b>Outstanding challenges</b> that `iidx` addresses 🗝️</summary>
 
+<br>
 There are some challenges in DE modelling, pertaining both to **methodology and usability**, that complicate this type of analyses.
 We describe these challenges and how we tackle them below.
 
@@ -93,6 +95,7 @@ Once all of them are installed, clone this repository, create a new project (`.R
 <details>
 <summary><b><u>Installing dependencies</u></b></summary>
 
+<br>
 ```R
 ## For browsing results of finished analysis:
 
@@ -135,6 +138,7 @@ install_github('raivokolde/pheatmap')
 <details>
 <summary><b>Session info</b> for reproducibility</summary>
 
+<br>
 For reproducibility, this is the output of `sessionInfo()` on a machine where the analysis runs successfully:
 
 ```R
@@ -189,6 +193,7 @@ loaded via a namespace (and not attached):
 <details>
 <summary><b>Containerisation</b> with Docker or Singularity</summary>
 
+<br>
 To build a [Docker](https://www.docker.com) or [Apptainer](https://apptainer.org) (formerly Singularity) image, start by pulling [a pre-built RStudio Server image](https://hub.docker.com/layers/dncr/rstudio-server/4.3.3-jammy/images/sha256-44383cd8e2345d5b323f73e2210523e8385a3cdf03c81621d871ef19359b888e).
 
 </details>
@@ -209,6 +214,7 @@ For many input parameters, default values can be used.
 <details>
 <summary><i>00_Preprocessing.R</i></summary>
 
+<br>
 *Applies compensation based on spillover (if required) and transformation to raw FCS data and saves the resulting pre-processed FCS files.*
 
 #### Description
@@ -305,7 +311,8 @@ Check for
 <details>
 <summary><i>01_BatchEffectCorrection.R</i></summary>
 
-*Uses* CytoNorm *normalisation to reduce major batch effects, if necessary.*
+<br>
+*Uses CytoNorm normalisation to reduce major batch effects, if necessary.*
 
 #### Description
 
@@ -373,7 +380,8 @@ If these occur, try increasing the number of quantiles used (`quantile_values` u
 <details>
 <summary><i>02_FlowSOMFeatureExtraction.R</i></summary>
 
-*Uses* FlowSOM *to cluster data into subsets, extract extract salient features for each sample and diagnose remaining batch effects.*
+<br>
+*Uses FlowSOM to cluster data into subsets, extract extract salient features for each sample and diagnose remaining batch effects.*
 
 #### Description
 
@@ -442,7 +450,8 @@ While some batch effect in state markers is likely to remain (and will be addres
 <details>
 <summary><i>03_OutlierAndNoiseDetection.R</i></summary>
 
-*Uses* FlowSOM*-derived features to flag outlier samples and computes background signal levels per marker (if unstained data is available).*
+<br>
+*Uses FlowSOM-derived features to flag outlier samples and computes background signal levels per marker (if unstained data is available).*
 
 #### Description
 
@@ -485,6 +494,7 @@ Outputs are saved in `Results_03_OutlierAndNoiseDetection`.
 <details>
 <summary><i>04_StatisticalModelling.R</i></summary>
 
+<br>
 *Performs a DE analysis using previously identified cell subsets and sample-level conditions.*
 
 #### Description
@@ -518,6 +528,7 @@ Outputs are saved in `Results_04_OutlierAndNoiseDetection`.
 <details>
 <summary><i>05_Profiling.R</i></summary>
 
+<br>
 *Creates profiles (descriptions) of* FlowSOM *metaclusters, using manually defined population gates and distributions of signal per marker.*
 
 #### Description
@@ -563,6 +574,7 @@ Outputs are saved in `Results_05_Profiling`.
 <details>
 <summary><i>06_Dashboard.R</i></summary>
 
+<br>
 *Opens an interactive dashboard that allows the user to explore, filter, interpret and export results of the analysis.*
 
 #### Description
