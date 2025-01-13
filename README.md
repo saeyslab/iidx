@@ -7,7 +7,7 @@ It can be used as a reference and basis for other computational analyses of larg
 We have validated our pipeline in two analyses of age- and sex-associated immunophenotype changes across 2089 donors, focusing on B-cell and T- & NK-cell flow data from peripheral blood, measured in 15 batches.
 
 <img src="./overview.png" alt="overview" width="900"/>
-***Overview of the computational pipeline.*** ***1.*** *FCS inputs and associated metadata are gathered.* ***2.*** *Data is pre-processed to obtain clean protein expression signal with minimal amount of batch effect.* ***3.*** *A clustering model is trained to partition data into subsets and extract salient features per subset, sample and marker.* ***4.*** *A battery of adapted parametric tests is used to model differential abundance and state of cell subsets based on sample-level biological predictors.*
+**Overview of the computational pipeline.** **1.** *FCS inputs and associated metadata are gathered.* **2.** *Data is pre-processed to obtain clean protein expression signal with minimal amount of batch effect.* **3.** *A clustering model is trained to partition data into subsets and extract salient features per subset, sample and marker.* **4.** *A battery of adapted parametric tests is used to model differential abundance and state of cell subsets based on sample-level biological predictors.*
 
 <details>
 <summary><b>Differential expression modelling background</b>: investigating changes in phenotype by condition 👩‍🔬</summary>
@@ -237,25 +237,24 @@ A **transformation function** (`tf`) needs to be specified in one of the followi
 - by specifying the path to a WSP (FlowJo workspace) file from which a transfomration can be extracted (set `tf` to `NULL` and specify path to the WSP file in `fname_wsp`)
 - using a generic R function to apply directly to expression data (*e.g.*, `function(x) arcsinh(x/120)`)
 - using a string descriptor:
-	- `'logicle'`: for which a *linearisation width* ($w$) co-factor needs to be specified as `tf_cofactor`, or
-	- `'arcsinh'`: for which a $b$ co-factor (as in $x\leftarrow \mathrm{asinh}(x/b)$) needs to be specified as `tf_cofactor`
+	- `'logicle'`: for which a *linearisation width* (`w`) co-factor needs to be specified as `tf_cofactor`, or
+	- `'arcsinh'`: for which a $b$ co-factor (as in `x <- asinh(x/b)`) needs to be specified as `tf_cofactor`
 
 Channels that should not be transformed (*e.g.*, forward-scatter and side-scatter in flow data) must be specified in `notrans`.
 
 **Minimum and maximum bounds for the transformed signal should be specified (in `signal_limits`); any signal outside of the range is trimmed (removed).**
 
-> [!WARNING]
-> If a WSP file is specified for extracting a transformation function (in `fname_wsp`), a path `fpath_fcs_ref` to a directory with a single 'reference' FCS file is also needed: this is one of the FCS files contained in the corresponding FlowJo workspace. The reference FCS path is needed for [*CytoML*](https://www.bioconductor.org/packages/release/bioc/html/CytoML.html) to successfully parse the WSP file. Pointing to the directory with all inputs FCS files is discouraged, as it can make the parsing extremely slow.
+> [!TIP]
+> If a WSP file is specified for extracting a transformation function (in `fname_wsp`), a path `fpath_fcs_ref` to a directory with a single 'reference' FCS file is also needed: this is one of the FCS files contained in the corresponding FlowJo workspace. The reference FCS path is needed for [*CytoML*](https://www.bioconductor.org/packages/release/bioc/html/CytoML.html) to successfully parse the WSP file. **Pointing to the directory with all inputs FCS files here is discouraged**, as it can make the parsing extremely slow.
 
 **Channel-marker pairs must be specified (in `channels`), and markers categorised as *lineage* or *state* (via `idcs_channels_lineage` and `idcs_channels_state`).**
 It must be possible to match the specified channel names to those in the input FCS files.
 Marker names can be modified.
 
-> [!NOTE]
+> [!IMPORTANT]
 > **Lineage markers** are assumed to have stable expression levels, and as such to define cell subsets in gating or clustering. **State markers** are assumed to define more transient cell states within subsets, and as such can be used to detect phenotype shifts based on a chosen sample-level condition downstream.
 
-> [!WARNING]
-> The panel of antibodies and protein markers used is assumed to be the same across all samples. If one or more channel names are incorrect in one or more FCS files, or redundant channels are present in some files, this can be corrected ad hoc (via `channels_rename` and `channels_remove`). Forward and side scatter should not be included among lineage or state markers.
+**The panel of antibodies and protein markers used is assumed to be the same across all samples.** If one or more channel names are incorrect in one or more FCS files, or redundant channels are present in some files, this can be corrected ad hoc (via `channels_rename` and `channels_remove`). Forward and side scatter should not be included among lineage or state markers.
 
 **An unstained FCS file per each batch, if available, can be provided to determine background noise (via `fpath_fcs_unstained`), so as to filter results by signal robustness downstream.**
 The unstained FCS files are named according to their batch (*e.g.*, `Batch5.fcs`, `Batch12.fcs`).
@@ -316,13 +315,13 @@ The transformations are trained to bring **target** batch distributions (`batch_
 By default, subsampled aggregates of expression data per batch are used in defining the transformations.
 Alternatively, quality-control (QC) files per each batch can be used (if `train_norm_on_qc` is set to `TRUE`).
 
-> [!WARNING]
+> [!IMPORTANT]
 > **Normalisation should be attempted in case of pronounced batch effects in lineage markers.** This module, regardless of whether normalisation is enabled, generates a **plot of Earth mover's distances (EMDs) between batches per marker**, to assess potential differences between groups of batches. **In the following module, diagnostic *UMAP* plots for detection of lineage-marker batch effects are generated.** If unsure whether normalisation is required, disable it first (set `normalise` to `FALSE`), apply feature extraction (next module) and inspect the metacluster abundance *UMAP* embeddings. If batch effect is detected, return here and try normalising the pre-processed data first.
 
 By default, compensated-transformed FCS files from the previous step are used for training the spline transformations, but other independently provided (pre-processed) files can be used instead (via `fpath_fcs_normtrain`).
 This can be applied if the analysed FCS data comes from a cell subset, but the used want to normalise based on the entire FCS files.
 
-> [!INFO]
+> [!TIP]
 > *CytoNorm* applies signal normalisation by cell compartments, determined using a low-resolution *FlowSOM* clustering (parametrised by `norm_xdim`, `norm_ydim` and `norm_n_metaclusters`). This clustering should be done using lineage markers only.
 
 If multiple target batches are present, **either a separate normalisation per target batch is used (default), or a joint normalisation is used for all of them** (if `per_batch` is set to `FALSE`).
@@ -392,7 +391,7 @@ Next, **each individual sample (FCS file) is mapped onto the trained *FlowSOM* m
 * median fluorescence intensities (**MFIs**) of state markers in each metacluster per sample
 * **phenopositivity** rates by state marker in each metacluster per sample
 
-> [!INFO]
+> [!TIP]
 > Phenopositivity rates (*i.e.*, proportions of phenotype-positive samples for a marker) are computed for bimodally expressed (-/+) state markers. To do this, the thresholds to separate negative and positive (dim/pos/bright) populations for a marker need to be specified by the user (in `thresholds`).
 
 Feature values are stored in **feature matrices**: with samples in rows and features in columns.
@@ -403,7 +402,7 @@ Feature values are stored in **feature matrices**: with samples in rows and feat
 The distribution of sample embeddings per batch should be close to uniform: if a batch separates out clearly in one area of the embedding, this indicates a batch effect.
 If normalisation was applied in the previous step, embeddings for both pre-normalisation and post-normalisation data are generated.
 
-> [!WARNING]
+> [!IMPORTANT]
 > It is highly desirable to reduce batch effect in lineage markers, if present. If the *UMAP* embeddings of metacluster abundances show any batch separating out from others, this is likely due to batch effect. Batch effects in state markers (which can be inspected in the *UMAP* embeddings for MFI and phenopositivity) are more likely to persist. They do not invalidate the *FlowSOM* clustering (which uses lineage markers only). Furthermore, **batch effects in state markers are corrected downstream, using mixed models for DE**.
 
 **If unstained samples are available, background signal per channel is computed for each batch.**
@@ -467,7 +466,7 @@ For each channel, the distribution of background signal (due to autofluorescence
 Background signal MFIs are computed, along with tentative **cut-offs for robust signal** (1-5 median absolute deviations above the corresponding MFI).
 **This allows to filter differential state results (*i.e.*, shifts in state marker expressions) by robustness against noise downstream.**
 
-> [!INFO]
+> [!IMPORTANT]
 > A distinction is made between the manually specified **phenopositivity thresholds** and the automatically computed **noise cut-offs** for robust signal. Phenopositivity thresholds are biologically relevant cut-offs for cells that are considered positive for a marker (whether dimly or brightly). The **noise cut-offs** are determined technically, based on measured background signal levels, to separate weak signal from noise.
 
 #### Settings
@@ -498,7 +497,7 @@ Outputs are saved in `Results_03_OutlierAndNoiseDetection`.
 
 The *FlowSOM*-derived feature matrices are used to fit batch-aware differential abundance (DA) and differential state (DS) models.
 
-> [!INFO]
+> [!IMPORTANT]
 > **Differential abundance (DA)** uses metacluster abundances in each sample to model the relative over- or under-represetnation of cell subsets. **Differential state (DS)** uses state marker MFIs **(DS-MFI)** and phenopositivity rates **(DS-Pheno)** to model changes in phenotype within cell subsets in each sample. Both DA and DS are modelled using continuous or binary predictors (*e.g.*, donor age, sex, condition).
 
 Multivariate models are used to adjust for **potential confounding effects** (*e.g.*, modelling effect of age, adjusted for sex), so as to disentangle multiple trends.
@@ -534,7 +533,7 @@ If manual population labels are to be used in conjunction with the *FlowSOM*-def
 At this point, the domain expert can also **check for artifacts introduced by pre-processing by inspecting the expression data** in this FCS file.
 The gating is then provided as a WSP file (defining a FlowJo workspace that includes the aggregate FCS file and a gating hierarchy.
 
-> [!WARNING]
+> [!TIP]
 > To label each cell, the leaf nodes of the gating hierarchy (*i.e.*, the most specific gates) are used. The provided gating hierarchy should be simple: it should not map cells to multiple leaf nodes at the same time.
 
 **The labelled populations can be re-named or merged** if needed.
@@ -621,4 +620,4 @@ The recipient then needs to source `06_Dashboard.R` in RStudio to launch the das
 **To publish results**, deploy your analysis dashboard as a Shiny app: more information [here](https://shiny.posit.co/r/deploy.html).
 
 <img src="./dashboard.png" alt="dashboard_screenshot" width="900"/>
-***Screenshot of dashboard with results.*** *Analysis results are presented in an interactive dashboard. This allows the user to browse through all results and filter them by experimental designs, significance effect size, cell subsets and markers of interest and robustness against noise. Selected results can be exported and easily traced to original expression data for verification.*
+**Screenshot of dashboard with results.** *Analysis results are presented in an interactive dashboard. This allows the user to browse through all results and filter them by experimental designs, significance effect size, cell subsets and markers of interest and robustness against noise. Selected results can be exported and easily traced to original expression data for verification.*
