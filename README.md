@@ -7,6 +7,7 @@ It can be used as a reference and basis for other computational analyses of larg
 We have validated our pipeline in two analyses of age- and sex-associated immunophenotype changes across 2089 donors, focusing on B-cell and T- & NK-cell flow data from peripheral blood, measured in 15 batches.
 
 <img src="./overview.png" alt="overview" width="900"/>
+
 **Overview of the computational pipeline.** **1.** *FCS inputs and associated metadata are gathered.* **2.** *Data is pre-processed to obtain clean protein expression signal with minimal amount of batch effect.* **3.** *A clustering model is trained to partition data into subsets and extract salient features per subset, sample and marker.* **4.** *A battery of adapted parametric tests is used to model differential abundance and state of cell subsets based on sample-level biological predictors.*
 
 <details>
@@ -206,7 +207,7 @@ All file paths are relative to the working directory.
 For many input parameters, default values can be used.
 
 <details>
-<summary><b>`00_Preprocessing.R`</b></summary>
+<summary><i>00_Preprocessing.R</i></summary>
 
 *Applies compensation based on spillover (if required) and transformation to raw FCS data and saves the resulting pre-processed FCS files.*
 
@@ -304,7 +305,7 @@ Check for
 <hr>
 </details>
 <details>
-<summary><b>`01_BatchEffectCorrection.R`</b></summary>
+<summary><i>01_BatchEffectCorrection.R</i></summary>
 
 *Uses* CytoNorm *normalisation to reduce major batch effects, if necessary.*
 
@@ -374,7 +375,7 @@ If these occur, try increasing the number of quantiles used (`quantile_values` u
 <hr>
 </details>
 <details>
-<summary><b>`02_FlowSOMFeatureExtraction.R`</b></summary>
+<summary><i>02_FlowSOMFeatureExtraction.R</i></summary>
 
 *Uses* FlowSOM *to cluster data into subsets, extract extract salient features for each sample and diagnose remaining batch effects.*
 
@@ -445,7 +446,7 @@ While some batch effect in state markers is likely to remain (and will be addres
 <hr>
 </details>
 <details>
-<summary><b>`03_OutlierAndNoiseDetection.R`</b></summary>
+<summary><i>03_OutlierAndNoiseDetection.R</i></summary>
 
 *Uses* FlowSOM*-derived features to flag outlier samples and computes background signal levels per marker (if unstained data is available).*
 
@@ -489,7 +490,7 @@ Outputs are saved in `Results_03_OutlierAndNoiseDetection`.
 <hr>
 </details>
 <details>
-<summary><b>`04_StatisticalModelling.R`</b></summary>
+<summary><i>04_StatisticalModelling.R</i></summary>
 
 *Performs a DE analysis using previously identified cell subsets and sample-level conditions.*
 
@@ -523,7 +524,7 @@ Outputs are saved in `Results_04_OutlierAndNoiseDetection`.
 <hr>
 </details>
 <details>
-<summary><b>`05_Profiling.R`</b></summary>
+<summary><i>05_Profiling.R</i></summary>
 
 *Creates profiles (descriptions) of* FlowSOM *metaclusters, using manually defined population gates and distributions of signal per marker.*
 
@@ -569,7 +570,7 @@ Outputs are saved in `Results_05_Profiling`.
 <hr>
 </details>
 <details>
-<summary><b>`06_Dashboard.R`</b></summary>
+<summary><i>06_Dashboard.R</i></summary>
 
 *Opens an interactive dashboard that allows the user to explore, filter, interpret and export results of the analysis.*
 
@@ -620,4 +621,5 @@ The recipient then needs to source `06_Dashboard.R` in RStudio to launch the das
 **To publish results**, deploy your analysis dashboard as a Shiny app: more information [here](https://shiny.posit.co/r/deploy.html).
 
 <img src="./dashboard.png" alt="dashboard_screenshot" width="900"/>
+
 **Screenshot of dashboard with results.** *Analysis results are presented in an interactive dashboard. This allows the user to browse through all results and filter them by experimental designs, significance effect size, cell subsets and markers of interest and robustness against noise. Selected results can be exported and easily traced to original expression data for verification.*
