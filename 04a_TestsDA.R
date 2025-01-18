@@ -1,0 +1,126 @@
+# Copyright 2025 David Novak
+# 
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+# 
+# http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+## iidx internal module: 04a_TestsDA.R
+## github.com/saeyslab/iidx
+
+# Maintainer: David Novak (davidnovak9000@gmail.com)
+# Description: Defines functions for differential abundance testing using edgeR
+# with extensions for post-hoc explainability (for a single experimental
+# design).
+
+
+## Function: fit a DA model ----
+
+fit_da_model <- function(
+    counts,             # cell counts per metacluster and sample
+    samples,            # sample names
+    annotation,         # sample-level annotation
+    predictor,          # biological predictor to be modelled
+    confounders = NULL  # confounders: Batch and/or 1 biological variable
+) {
+  
+  ## Only allow one biological confounder
+  if (!is.null(confounders)) {
+    if (length(confounders[confounders!='Batch'])>1) {
+      stop('Only one biological confounder at a time is currently allowed')
+    }
+  }
+  
+  ## Set up experimental design
+  experiment <- prep_experiment(
+    files          = samples,
+    annotation     = annotation,
+    fixed_effects  = c(predictor, confounders),
+    random_effects = c() # no random effects allowed in edgeR model
+  )
+  design     <- experiment$Design
+  na_samples <- experiment[['NA']]
+  
+  ## Exclude samples with missing value for predictor or chosen covariate
+  mask <- colnames(counts)%in%na_samples
+  counts  <- counts[, !mask, drop = FALSE]
+  samples <- samples[!mask]
+  
+  ## Establish metaclusters as compartments for testing
+  comps  <- rownames(counts)
+  
+  ## Calculate trimmed mean of M-values normalisation factors
+  nf <- edgeR::calcNormFactors(counts, method = 'TMM')
+  
+  ## Represent abundances as a DGEList object
+  y <- edgeR::DGEList(counts, norm.factors = nf)
+  
+  ## Estimate negative-binomial dispersions
+  y_disp <- edgeR::estimateDisp(y, design)
+  
+  ## Fit negative-binomial model per compartment
+  suppressWarnings({
+    fit <- edgeR::glmFit(y_disp, design)
+  })
+  
+  ## Conduct likelihood ratio tests for predictor
+  lrt    <- edgeR::glmLRT(fit, coef = 2)
+  
+  ## Extract fitted parameters for predictor
+  logfcs <- lrt$table$logFC                   # log fold changes
+  fcs    <- sign(logfcs)*(2^abs(logfcs))      # fold changes
+  p      <- lrt$table$PValue                  # raw p-values
+  p_adj  <- stats::p.adjust(p, method = 'BH') # adjusted p-values
+  names(logfcs) <-
+    names(fcs) <-
+    names(p) <-
+    names(p_adj) <- comps
+  
+  ## Conduct likelihood ratio tests and extract fitted params for counfounder
+  logfcs_conf <- fcs_conf <- p_conf <- p_adj_conf <- NA
+  bio_conf    <- confounders[confounders!='Batch'] # do not consider batch here
+  cont_conf   <- NULL # continuous confounder?
+  if (!is.null(bio_conf) && length(bio_conf)>0) { # confounder specified
+    
+    lrt_conf    <- edgeR::glmLRT(fit, coef = ncol(fit$design))
+    
+    logfcs_conf <- lrt_conf$table$logFC                     # log fold changes
+    fcs_conf    <- sign(logfcs_conf) * (2^abs(logfcs_conf)) # fold changes
+    p_conf      <- lrt_conf$table$PValue                    # raw p-values
+    p_adj_conf  <- stats::p.adjust(p_conf, method = 'BH')   # adjusted p-values
+    names(logfcs_conf) <-
+      names(fcs_conf) <-
+      names(p_conf) <-
+      names(p_adj_conf) <- comps
+    
+    cont_conf <- is.numeric(experiment$Data[, bio_conf])
+  }
+  
+  ## Gather fitted and post-hoc stats
+  res <- data.frame(
+    'Compartment'       = comps,
+    'logFC'             = logfcs,
+    'FC'                = fcs,
+    'PValue'            = p,
+    'AdjPVal'           = p_adj,
+    'logFCConfounder'   = logfcs_conf,
+    'FCConfounder'      = fcs_conf,
+    'PValueConfounder'  = p_conf,
+    'AdjPValConfounder' = p_adj_conf
+  )
+  
+  ## Add metadata
+  attributes(res)$Continuous <- is.numeric(experiment$Data[, predictor])
+  attributes(res)$ContinuousConfounder <- cont_conf
+  attributes(res)$na_annotation <-
+    na_samples # samples excluded due to missing annotation
+  
+  res
+}
