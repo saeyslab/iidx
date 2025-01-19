@@ -1177,5 +1177,14 @@ pal <- c(
   '#A4E804', '#324E72', '#6A3A4C'
 )
 
+## Load multi-threading packages if needed ----
+
+if (run_parallel) {
+  
+  require(parallel)
+  require(doParallel)
+  require(snow)
+  require(doSNOW)
+}
 
 
