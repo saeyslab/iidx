@@ -59,7 +59,7 @@ However, true confounding effects can also contribute to this problem.
 When fitting statistical models to data with large sample counts, **even spurious effects may yield low *p*-values** which persist after multiple testing correction.
 This makes filtering results difficult.
 
-`iidx` avoids pre-set bounds for *p*-values or effect sizes, instead providing an interace to explore of results in full, using model coefficients for intial sorting.
+`iidx` avoids pre-set bounds for *p*-values or effect sizes, instead providing an interface to explore results in full, using model coefficients for intial sorting.
 Additionally, filtering by signal robustness can be applied to results (described below).
 
 #### <u>Noise due to background signal</u>
@@ -582,14 +582,9 @@ Outputs (exported CSV files) are saved in `Results_06_Dashboard`.
 
 ## Replicating our analyses
 
-Upon publication, the results of our **B-cell and T- and NK-cell analyses** will be saved in the `Results_B` and `Results_TNK` directories, respectively.
+Settings for our **B-cell and T- and NK-cell analyses** are saved in the `Results_B` and `Results_TNK` directories, respectively.
 
-This encompasses input parameter settings in `99_SetUp.R` and all outputs necessary to launch the dashboard.
-This is done by placing the results in the working (parent) directory and sourcing the `06_Dashboard.R` script.
-
-We also include scripts for post-hoc generation of figures with results, as we do in our manuscript.
-
-**Other inputs, including the FCS and WSP files, will be hosted separately.**
+Other inputs, including input FCS files, sample-level annotation and all analysis results will be hosted separately upon publication.
 
 ## Scaling up analyses
 
@@ -608,6 +603,8 @@ Thanks to this, our entire analysis of a dataset with >2k samples (with a median
 Once a pipeline has been executed, the best way to share results is via the interactive **dashboard** that allows for **filtering, interpretation and export of all potential biological leads**.
 
 **To share internally**, transfer all `.R` scripts, along with `Results_02_[...]`, `Results_03_[...]`, `Results_04_[...]` and `Results_05_[...]` with their contents to your recipient.
+(Is unstained samples were included as inputs, `Results_00_Preprocessing/UnstainedSamplesAggregate.fcs` is also needed.)
+
 The recipient then needs to source `06_Dashboard.R` in RStudio to launch the dashboard.
 **To publish results**, deploy your analysis dashboard as a Shiny app: more information [here](https://shiny.posit.co/r/deploy.html).
 
