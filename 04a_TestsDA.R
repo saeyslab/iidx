@@ -63,7 +63,7 @@ fit_da_model <- function(
   y <- edgeR::DGEList(counts, norm.factors = nf)
   
   ## Estimate negative-binomial dispersions
-  y_disp <- edgeR::estimateDisp(y, design)
+  y_disp <- edgeR::estimateDisp(y, design, robust = TRUE)
   
   ## Fit negative-binomial model per compartment
   suppressWarnings({
