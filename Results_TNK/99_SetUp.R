@@ -152,7 +152,7 @@ feature_mapping_batch_size <- 100
 
 ## 03_OutlierAndNoiseDetection.R ----
 
-n_dev <- 15
+n_dev <- NULL
 dev_type <- 'sd'
 
 ## 04_StatisticalModelling.R ----

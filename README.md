@@ -4,7 +4,7 @@
 Written in R, `iidx` extends state-of-the-art tools for pre-processing, feature extraction and statistical analysis of flow and mass cytometry data, and includes **a novel framework for post-hoc filtering, interpretation and export of results**.
 It can be used as a reference and basis for other computational analyses of large cytometry datasets.
 
-We have validated our pipeline in two analyses of age- and sex-associated immunophenotype changes across 2089 donors, focusing on B-cell and T- & NK-cell flow data from peripheral blood, measured in 15 batches.
+We have validated our pipeline in two analyses of age- and sex-associated immunophenotype changes across 2196 donors, focusing on B-cell and T- & NK-cell flow data from peripheral blood, measured in 15 batches.
 
 <img src="./overview.png" alt="overview" width="900"/>
 
@@ -446,14 +446,14 @@ While some batch effect in state markers is likely to remain (and will be addres
 
 #### Description
 
-This module applies two filtering methods: one for **detecting unrepresentative samples to consider as outliers** and one for **quantifying robustness of results with respect to background signal**.
+This module applies two filtering methods: one for detecting unrepresentative samples to consider as outliers and one for **quantifying robustness of results with respect to background signal**.
+**In our analyses, exclusion of samples as outliers is not used, and is best avoided if not absolutely needed.**
 
 To detect outlier samples, we look at each metacluster's proportion within each sample.
 If, for any metacluster, a certain sample shows a **drastically different proportion value** than other samples (based on a cut-off), it may be considered **not representative of the analysed cell compartment overall**.
 It can be therefore be flagged as an outlier, and excluded from downstream analysis based on this criterion.
 For completeness, if a sample is flagged as an outlier, all of its feature values (*i.e.*, all metacluster abundances, state marker MFIs and phenopositivities) are excluded.
 The cut-off for extreme proportion values, adjustable by the user, is set as a number of standard deviations (SDs) from mean or median absolute deviations (MADs) from median, based on generated plots of the metacluster proportion distributions.
-For a more conservative approach, sample outlier removal can be skipped.
 
 **Background signal is computed in analyses where unstained samples are available.**
 **The aim is to disentangle dim signal from noise.**
