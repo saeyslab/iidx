@@ -447,7 +447,6 @@ While some batch effect in state markers is likely to remain (and will be addres
 #### Description
 
 This module applies two filtering methods: one for detecting unrepresentative samples to consider as outliers and one for **quantifying robustness of results with respect to background signal**.
-**In our analyses, exclusion of samples as outliers is not used, and is best avoided if not absolutely needed.**
 
 To detect outlier samples, we look at each metacluster's proportion within each sample.
 If, for any metacluster, a certain sample shows a **drastically different proportion value** than other samples (based on a cut-off), it may be considered **not representative of the analysed cell compartment overall**.
