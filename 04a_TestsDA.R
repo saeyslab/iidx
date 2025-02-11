@@ -57,7 +57,7 @@ fit_da_model <- function(
   comps  <- rownames(counts)
   
   ## Calculate trimmed mean of M-values normalisation factors
-  nf <- edgeR::calcNormFactors(counts, method = 'TMM')
+  nf <- edgeR::calcNormFactors(counts, method = 'upperquartile')
   
   ## Represent abundances as a DGEList object
   y <- edgeR::DGEList(counts, norm.factors = nf)
