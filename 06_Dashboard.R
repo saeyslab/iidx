@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-## iidx user-level module: 06_Preprocessing.R
+## iidx user-level module: 06_Dashboard.R
 ## github.com/saeyslab/iidx
 
 # Maintainer: David Novak (davidnovak9000@gmail.com)
