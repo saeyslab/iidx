@@ -523,7 +523,7 @@ test_ds <- function(
                 annotation = annotation,
                 predictor  = predictor,
                 confounder = confounder,
-                famstr     = famstr
+                famstr     = famstr,
                 parallel   = parallel,
                 verbose    = verbose
               )
