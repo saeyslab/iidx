@@ -46,7 +46,7 @@ ds_mfi_singlefit <- function(
   samples    <- names(y)
   
   ## Apply scaling to the sampling weights
-  weights <- weights/mean(weights)
+  weights <- weights/median(weights)
   
   ## Gather inputs required to fit the model
   dat <-
