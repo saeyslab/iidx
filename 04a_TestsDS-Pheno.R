@@ -122,6 +122,7 @@ ds_pheno_singlefit <- function(
   ## Extract fitted parameters for predictor
   coeff <- unlist(stats::coef(fit)$cond$Batch[1, -1]) # effect
   pval  <- summary(fit)$coefficients$cond[, 'Pr(>|z|)'][-1] # p-value
+  pval[is.na(pval)] <- 1.
   
   ## Gather fitted parameters
   res <- data.frame(
