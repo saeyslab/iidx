@@ -28,7 +28,9 @@ fit_da_model <- function(
     samples,            # sample names
     annotation,         # sample-level annotation
     predictor,          # biological predictor to be modelled
-    confounders = NULL  # confounders: Batch and/or 1 biological variable
+    confounders = NULL, # confounders: Batch and/or 1 biological variable
+    famstr = FALSE      # whether annotation$FamilyID should be used to account
+    # for siblings using fixed intercepts
 ) {
   
   ## Only allow one biological confounder
@@ -42,7 +44,12 @@ fit_da_model <- function(
   experiment <- prep_experiment(
     files          = samples,
     annotation     = annotation,
-    fixed_effects  = c(predictor, confounders),
+    fixed_effects  = 
+      if (famstr) {
+        c(predictor, confounders, 'FamilyID')
+      } else {
+        c(predictor, confounders)
+      },
     random_effects = c() # no random effects allowed in edgeR model
   )
   design     <- experiment$Design
@@ -124,4 +131,3 @@ fit_da_model <- function(
   
   res
 }
-

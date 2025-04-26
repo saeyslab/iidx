@@ -24,14 +24,14 @@
 ## Function: fit DS-MFI for single compartment ----
 
 ds_mfi_singlefit <- function(
-  comps,      # all compartments (metacluster-marker combinations)
-  idx_comp,   # index of compartment to test
-  mfi,        # sample-wise MFI values per compartment
-  weights,    # weights per sample
-  experiment, # experiment design from `prep_experiment`
-  batches,    # batch per sample
-  nbatches,   # number of unique batches
-  wconf       # whether confounder is specified
+    comps,      # all compartments (metacluster-marker combinations)
+    idx_comp,   # index of compartment to test
+    mfi,        # sample-wise MFI values per compartment
+    weights,    # weights per sample
+    experiment, # experiment design from `prep_experiment`
+    batches,    # batch per sample
+    nbatches,   # number of unique batches
+    wconf       # whether confounder is specified
 ) {
   
   ## Gather inputs for model
@@ -72,11 +72,12 @@ ds_mfi_singlefit <- function(
   fi <-
     lme4::fixef(fit)['(Intercept)'] # fixed intercept
   re <-
-    as.data.frame(lme4::ranef(fit)) # random intercept errors
+    as.data.frame(lme4::ranef(fit)) # all random-intercept errors
+  re <- re[re$grpvar=='Batch', ] # batch-intercept errors
   z_crit <-
     stats::qnorm(.975) # critical value for CI (for two-tailed Gaussian)
   intercepts <-
-    stats::coef(fit)$Batch[, '(Intercept)'] # random intercepts
+    stats::coef(fit)$Batch[, '(Intercept)'] # batch intercepts
   re$ci_min <-
     intercepts-z_crit*re$condsd # CI lower bounds
   re$ci_max <-
@@ -166,6 +167,8 @@ fit_ds_mfi_model <- function(
     annotation,         # sample-level annotation
     predictor,          # biological predictor to be modelled
     confounder = NULL,  # biological confounder to be modelled
+    famstr     = FALSE, # whether annotation$FamilyID should be used to account
+    # for siblings using fixed intercepts
     parallel   = FALSE, # whether to use multi-threading
     verbose    = TRUE   # whether to show progress
 ) {
@@ -178,9 +181,15 @@ fit_ds_mfi_model <- function(
   
   ## Set up experiment design
   experiment <- prep_experiment(
-    samples, annotation,
-    fixed_effects  = c(predictor, confounder),
-    random_effects = 'Batch', # (batch modelled via random intercepts)
+    samples,
+    annotation,
+    fixed_effects = c(predictor, confounder),
+    random_effects =
+      if (famstr) {
+        c('Batch', 'FamilyID')
+      } else {
+        'Batch'
+      }, # (batch and maybe family ID modelled via random intercepts)
     force_ls       = TRUE
   )
   na_annotation <- experiment[['NA']]
@@ -321,8 +330,8 @@ fit_ds_mfi_model <- function(
     'random_intercepts' = random_intercepts,
     'batch_r_squared'   = batch_rsq,
     'na_annotation'     = na_annotation,
-      # ^ samples excluded due to missing annotation (for all compartments)
+    # ^ samples excluded due to missing annotation (for all compartments)
     'na_outcome'        = na_outcome
-      # ^ samples excluded due to missing outcome values (per compartment)
+    # ^ samples excluded due to missing outcome values (per compartment)
   )
 }

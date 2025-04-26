@@ -263,12 +263,13 @@ The same compensation-transformation procedure is used to pre-process the unstai
 
 * **`run_parallel` (Boolean):** whether to attempt using multiple CPU cores for some operations to speed them up
 * **`fpath_fcs` (string):** path to directory with raw FCS files
-* **`annotation` (data frame):** sample-level annotation per row; must contain the following columns:
+* **`annotation` (data frame):** sample-level annotation per row, with the following columns:
     * **`FileName` (string):** names of FCS files to include in analysis (without path)
     * **`Batch` (integer):** batch number per sample
     * **`QC` (Boolean):** whether the sample should be considered as a QC file for its batch by CytoNorm
     * **`Cohort` (string):** cohort name per sample (can all be the same if only a single cohort of subjects/donors was measures)
     * continuous and/or binary phenotype condition columns (*e.g.*, `Sex`, `Age`, `CMVserostatus`)
+    * **`FamilyID` (optional; integer):** numeric ID per family of siblings/related donors, to correct for the effect of relatedness later on
 * **`batch_remove` (integer vector, optional):** number(s) of batch(es) to exclude from analysis
 * **`compensate` (Boolean):** whether to apply compensation based on spillover
 * **`fname_wsp` (string, optional):** path to WSP (FlowJo workspace) file, specified only if transformation function should be extracted from it
@@ -494,6 +495,9 @@ The *FlowSOM*-derived feature matrices are used to fit batch-aware differential 
 
 Multivariate models are used to adjust for **potential confounding effects** (*e.g.*, modelling effect of age, adjusted for sex), so as to disentangle multiple trends.
 All statistical models are trained to account for remaining batch effects, and post-hoc interpretation techniques are used to evaluate their effect on the model and its fit.
+
+In addition, if the data comes from a cohort of donors where some are siblings, the effect of relatedness can be accounted for in the statistical models.
+To that end, the annotation table should encode the related subgroups using a `FamilyID` column of integer values per sample.
 
 #### Settings
 

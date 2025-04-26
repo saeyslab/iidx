@@ -24,14 +24,14 @@
 ## Function: fit DS-Pheno for single compartment ----
 
 ds_pheno_singlefit <- function(
-  comps,      # all compartments (metacluster-marker combinations)
-  idx_comp,   # index of compartment to test
-  phenopos,   # phenopositivity rates per compartment per sample
-  weights,    # weights per sample
-  experiment, # experiment design generated using `prep_experiment`
-  batches,    # batch per sample
-  nbatches,   # number of unique batches
-  wconf       # whether confounder is specified
+    comps,      # all compartments (metacluster-marker combinations)
+    idx_comp,   # index of compartment to test
+    phenopos,   # phenopositivity rates per compartment per sample
+    weights,    # weights per sample
+    experiment, # experiment design generated using `prep_experiment`
+    batches,    # batch per sample
+    nbatches,   # number of unique batches
+    wconf       # whether confounder is specified
 ) {
   
   ## Gather inputs for model
@@ -85,7 +85,8 @@ ds_pheno_singlefit <- function(
   ri <-
     stats::coef(fit)$cond$Batch[, '(Intercept)'] # intercepts
   re <-
-    as.data.frame(glmmTMB::ranef(fit)) # errors
+    as.data.frame(lme4::ranef(fit)) # all random-intercept errors
+  re <- re[re$grpvar=='Batch', ] # batch-intercept errors
   z_crit <-
     stats::qnorm(.975) # critical value for CI (for two-tailed Gaussian)
   ci_min <- ri-z_crit*re$condsd # CI lower bounds
@@ -176,6 +177,7 @@ fit_ds_pheno_model <- function(
     annotation,         # sample-level annotation
     predictor,          # biological predictor to be modelled
     confounder = NULL,  # biological confounder to be modelled
+    famstr     = FALSE, 
     parallel   = FALSE, # whether to use multi-threading
     verbose    = TRUE   # whether to show progress
 ) {
@@ -191,7 +193,12 @@ fit_ds_pheno_model <- function(
     samples,
     annotation,
     fixed_effects  = c(predictor, confounder),
-    random_effects = 'Batch', # (batch modelled via random intercepts)
+    random_effects =
+      if (famstr) {
+        c('Batch', 'FamilyID')
+      } else {
+        'Batch'
+      }, # (batch and maybe family ID modelled via random intercepts)
     force_ls       = TRUE
   )
   na_annotation <- experiment[['NA']]
@@ -240,8 +247,8 @@ fit_ds_pheno_model <- function(
       },
       .inorder      = TRUE, # (set to FALSE to get more speed-up)
       .options.snow = opts,
-      .export = c('ds_pheno_singlefit'), # required function
-      .packages = c('glmmTMB', 'scales') # required packages
+      .export       = c('ds_pheno_singlefit'), # required function
+      .packages     = c('glmmTMB', 'scales') # required packages
     ) %dopar% {
       ds_pheno_singlefit(
         comps, idx_comp, phenopos, weights, experiment, batches, nbatches, wconf

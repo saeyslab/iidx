@@ -33,7 +33,7 @@ test_da <- function(
     confounders = c(),  # biological confounders
     verbose     = TRUE  # whether to show progress
 ) {
-
+  
   ## Save input sample names before any filtering
   input_samples   <- rownames(counts)
   n_input_samples <- length(input_samples)
@@ -42,16 +42,21 @@ test_da <- function(
   samples         <- rownames(counts) # will be filtered later
   cc              <- t(counts) # (edgeR requires sample names in columns)
   
-  ## Resolve predictors, confounders and batches
+  ## Resolve predictors, confounders, batches & family structure
   batches <- unique(annotation$Batch[annotation$FileName%in%samples])
   nba     <- length(batches)
   npred   <- length(predictors)
   nconf   <- length(confounders)
   wconf   <- nconf>0
+  famstr  <- 'FamilyID'%in%colnames(annotation)&&
+    length(unique(annotation$FamilyID[!is.na(annotation$FamilyID)]))>1
+  
   if (verbose) {
     
     message(
-      'Batch-adjusted edgeR models for ',
+      'Batch-adjusted',
+      if (famstr) { ', sibling-adjusted '} else { ' ' },
+      'edgeR models for ',
       npred, ' predictors in ',
       nrow(cc), ' compartments with up to ',
       nconf, ' potential ', ifelse(nconf==1, 'confounder', 'confounders'),
@@ -106,14 +111,15 @@ test_da <- function(
     
     predictor <- predictors[idx_pred]
     data <- cc
-      
+    
     ## Fit joint model without biological covariate term
     fit <- fit_da_model(
       counts      = data,
       samples     = samples,
       annotation  = annotation,
       predictor   = predictor,
-      confounders = c('Batch')
+      confounders = c('Batch'),
+      famstr      = famstr
     )
     
     ## Store fitted params and samples excluded due to missing labels
@@ -148,7 +154,8 @@ test_da <- function(
             samples     = samples,
             annotation  = annotation,
             predictor   = predictor,
-            confounders = c('Batch', confounder)
+            confounders = c('Batch', confounder),
+            famstr      = famstr
           )
           
           ## Store fitted params and samples excluded due to missing labels
@@ -217,7 +224,8 @@ test_da <- function(
         samples     = batch_samples, # input samples restricted to 1 batch
         annotation  = batch_annot,
         predictor   = predictor,
-        confounders = NULL
+        confounders = NULL,
+        famstr      = famstr
       )
       
       ## Store fitted params and samples excluded due to missing labels
@@ -252,7 +260,8 @@ test_da <- function(
               samples     = batch_samples, # input samples restricted to 1 batch
               annotation  = batch_annot,
               predictor   = predictor,
-              confounders = confounder
+              confounders = confounder,
+              famstr      = famstr
             )
             
             ## Store fitted params and samples excluded due to missing labels
@@ -286,13 +295,14 @@ test_da <- function(
   )
   
   ## Add metadata
-  attributes(res)$AnalysisType  <- 'Differential Abundance'
-  attributes(res)$BaseModel     <- 'FlowSOM'
-  attributes(res)$Predictors    <- predictors
-  attributes(res)$Continuous    <- cont
-  attributes(res)$Annotation    <- annotation
-  attributes(res)$InputSamples  <- input_samples
-  attributes(res)$NInputSamples <- n_input_samples
+  attributes(res)$AnalysisType   <- 'Differential Abundance'
+  attributes(res)$BaseModel      <- 'FlowSOM'
+  attributes(res)$Predictors     <- predictors
+  attributes(res)$Continuous     <- cont
+  attributes(res)$Annotation     <- annotation
+  attributes(res)$InputSamples   <- input_samples
+  attributes(res)$NInputSamples  <- n_input_samples
+  attributes(res)$FamilyAdjusted <- famstr
   
   res
 }
@@ -362,7 +372,7 @@ test_ds <- function(
   ## Determine sample weights
   weights <- rowSums(counts)
   
-  ## Resolve predictors, their covariates and batches
+  ## Resolve predictors, their covariates, batches & family structure
   nconf <- length(confounders)
   wconf <- nconf>0
   npred <- length(predictors)
@@ -371,10 +381,15 @@ test_ds <- function(
     as.integer(annotation$Batch[annotation$FileName%in%samples])
   )
   nba   <- length(batches)
+  famstr  <- 'FamilyID'%in%colnames(annotation)&&
+    length(unique(annotation$FamilyID[!is.na(annotation$FamilyID)]))>1
   if (verbose) {
     
     message(
-      'Batch-adjusted ', str_model, ' models for ',
+      'Batch-adjusted',
+      if (famstr) { ', sibling-adjusted '} else { ' ' },
+      str_model,
+      ' models for ',
       npred, ' predictors in ',
       ncomp, ' compartments with up to ',
       nconf, ' potential ', ifelse(nconf==1, 'confounder', 'confounders'),
@@ -432,6 +447,7 @@ test_ds <- function(
           annotation = annotation,
           predictor  = predictor,
           confounder = NULL,
+          famstr     = famstr,
           parallel   = parallel,
           verbose    = verbose
         )
@@ -444,6 +460,7 @@ test_ds <- function(
           annotation = annotation,
           predictor  = predictor,
           confounder = NULL,
+          famstr     = famstr,
           parallel   = parallel,
           verbose    = verbose
         )
@@ -493,6 +510,7 @@ test_ds <- function(
                 annotation = annotation,
                 predictor  = predictor,
                 confounder = confounder,
+                famstr     = famstr,
                 parallel   = parallel,
                 verbose    = verbose
               )
@@ -505,6 +523,7 @@ test_ds <- function(
                 annotation = annotation,
                 predictor  = predictor,
                 confounder = confounder,
+                famstr     = famstr
                 parallel   = parallel,
                 verbose    = verbose
               )
@@ -553,8 +572,9 @@ test_ds <- function(
   attributes(res)$Confounders <- confounders
   attributes(res)$Continuous  <- cont
   attributes(res)$Annotation  <- annotation
-  attributes(res)$InputSamples  <- input_samples
-  attributes(res)$NInputSamples <- n_input_samples
+  attributes(res)$InputSamples   <- input_samples
+  attributes(res)$NInputSamples  <- n_input_samples
+  attributes(res)$FamilyAdjusted <- famstr
   
   res
 }
