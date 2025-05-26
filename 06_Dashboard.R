@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-## iidx user-level module: 06_Dashboard.R
+## iidx user-level module: 06_Preprocessing.R
 ## github.com/saeyslab/iidx
 
 # Maintainer: David Novak (davidnovak9000@gmail.com)
@@ -1180,7 +1180,6 @@ server <- function(
         react$bfsom_robustness_rates <- NULL
       }
       
-      ## Update volcano plot
       p <- plot_volcano(
         res = bfsom_res,
         marker =
@@ -1192,6 +1191,7 @@ server <- function(
         predictor         = bfsom_pred,
         confounder        = bfsom_conf,
         robustness_rates  = react$bfsom_robustness_rates,
+        robustness_cutoff = react$bfsom_robustness_sample_filter_strength,
         interactive       = TRUE,
         state_markers     = state_markers
       )
