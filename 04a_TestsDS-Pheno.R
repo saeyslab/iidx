@@ -24,15 +24,20 @@
 ## Function: fit DS-Pheno for single compartment ----
 
 ds_pheno_singlefit <- function(
-    comps,      # all compartments (metacluster-marker combinations)
-    idx_comp,   # index of compartment to test
-    phenopos,   # phenopositivity rates per compartment per sample
-    weights,    # weights per sample
-    experiment, # experiment design generated using `prep_experiment`
-    batches,    # batch per sample
-    nbatches,   # number of unique batches
-    wconf       # whether confounder is specified
+    comps,            # all compartments (metacluster-marker combinations)
+    idx_comp,         # index of compartment to test
+    phenopos,         # phenopositivity rates per compartment per sample
+    weights,          # weights per sample
+    experiment,       # experiment design generated using `prep_experiment`
+    experiment_inter, # experiment design from `prep_experiment` with
+                      # interaction between predictor and confounder (or NULL)
+    batches,          # batch per sample
+    nbatches,         # number of unique batches
+    wconf             # whether confounder is specified
 ) {
+  
+  ## Resolve interaction modelling
+  interaction <- !is.null(experiment_inter)
   
   ## Gather inputs for model
   comp <- comps[idx_comp]
@@ -126,16 +131,20 @@ ds_pheno_singlefit <- function(
   
   ## Gather fitted parameters
   res <- data.frame(
-    'Compartment'       = comp,
-    'PValue'            = pval[1],
-    'AdjPVal'           = NA,
-    'logodds'           = coeff[1],
-    'odds'              = exp(coeff[1]),
-    'Rsq'               = rsq,
-    'PValueConfounder'  = NA,
-    'AdjPValConfounder' = NA,
-    'logoddsConfounder' = NA,
-    'oddsConfounder'    = NA
+    'Compartment'        = comp,
+    'PValue'             = pval[1],
+    'AdjPVal'            = NA,
+    'logodds'            = coeff[1],
+    'odds'               = exp(coeff[1]),
+    'Rsq'                = rsq,
+    'PValueConfounder'   = NA,
+    'AdjPValConfounder'  = NA,
+    'logoddsConfounder'  = NA,
+    'oddsConfounder'     = NA,
+    'PValueInteraction'  = NA,
+    'AdjPValInteraction' = NA,
+    'logoddsInteraction' = NA,
+    'oddsInteraction'    = NA
   )
   if (wconf) {
     res['PValueConfounder']  <- pval[2]
@@ -163,30 +172,62 @@ ds_pheno_singlefit <- function(
   na_outcome        <- list(na_outcome)
   names(na_outcome) <- comp
   
+  ## Resolve significance and magnitude of interaction
+  if (interaction) {
+    
+    suppressMessages({
+      suppressWarnings({
+        fit <- glmmTMB::glmmTMB(
+          formula = experiment_inter$Formula,
+          data    = d,
+          weights = d$w,
+          family  = glmmTMB::beta_family(link = 'logit')
+        )
+      })
+    })
+    idx_inter   <- ncol(stats::coef(fit)$cond$Batch)
+    coeff_inter <- unlist(stats::coef(fit)$cond$Batch[1, idx_inter]) # effect
+    pval_inter  <- summary(fit)$coefficients$cond[, 'Pr(>|z|)'][idx_inter] # p-value
+    pval_inter[is.na(pval_inter)] <- 1.
+    
+    res['PValueInteraction']  <- pval_inter
+    res['oddsInteraction']    <- exp(coeff_inter)
+    res['logoddsInteraction'] <- coeff_inter
+  }
+  
   list(
     'res'               = res,
     'random_intercepts' = random_intercepts,
     'batch_rsq'         = batch_rsq,
-    'na_outcome'        = na_outcome
+    'na_outcome'        = na_outcome,
+    'interaction'       = interaction
   )
 }
 
 fit_ds_pheno_model <- function(
-    phenopos,           # phenopositivity rates per compartment per sample
-    weights,            # weights per sample
-    samples,            # sample names
-    annotation,         # sample-level annotation
-    predictor,          # biological predictor to be modelled
-    confounder = NULL,  # biological confounder to be modelled
-    famstr     = FALSE, 
-    parallel   = FALSE, # whether to use multi-threading
-    verbose    = TRUE   # whether to show progress
+    phenopos,            # phenopositivity rates per compartment per sample
+    weights,             # weights per sample
+    samples,             # sample names
+    annotation,          # sample-level annotation
+    predictor,           # biological predictor to be modelled
+    confounder = NULL,   # biological confounder to be modelled
+    famstr     = FALSE,  # whether annotation$FamilyID should be used to account
+                         # for siblings using fixed intercepts
+    interaction = FALSE, # whether to also test potential interaction between
+                         # predictor and biological confounder
+    parallel   = FALSE,  # whether to use multi-threading
+    verbose    = TRUE    # whether to show progress
 ) {
   
-  ## Only allow one biological covariate/confounder
+  ## Resolve specification of biological confounders
   wconf <- !is.null(confounder)&&length(confounder)>0
   if (wconf && length(confounder)!=1) {
     stop('One biological confounder at a time is currently allowed')
+  }
+  if (!wconf && interaction) {
+    stop(
+      'Cannot model interaction term in the absence of a biological confounder'
+    )
   }
   
   ## Set up experiment design
@@ -200,9 +241,29 @@ fit_ds_pheno_model <- function(
       } else {
         'Batch'
       }, # (batch and maybe family ID modelled via random intercepts)
-    force_ls       = TRUE
+    force_ls = TRUE,
+    interactions = FALSE
   )
   na_annotation <- experiment[['NA']]
+  
+  ## Resolve interaction modelling
+  experiment_inter <- NULL
+  if (interaction) {
+    
+    experiment_inter <- prep_experiment(
+      samples,
+      annotation,
+      fixed_effects = c(predictor, confounder),
+      random_effects =
+        if (famstr) {
+          c('Batch', 'FamilyID')
+        } else {
+          'Batch'
+        }, # (batch and maybe family ID modelled via random intercepts)
+      force_ls = TRUE,
+      interactions = TRUE
+    )
+  }
   
   ## Exclude samples with missing predictor/covariate values
   mask       <- colnames(phenopos)%in%na_annotation
@@ -243,7 +304,8 @@ fit_ds_pheno_model <- function(
           'random_intercepts' =
             rbind(res1$random_intercepts, res2$random_intercepts),
           'batch_rsq' = rbind(res1$batch_rsq, res2$batch_rsq),
-          'na_outcome' = c(res1$na_outcome, res2$na_outcome)
+          'na_outcome' = c(res1$na_outcome, res2$na_outcome),
+          'interaction' = c(res1$interaction, res2$interaction)
         )
       },
       .inorder      = TRUE, # (set to FALSE to get more speed-up)
@@ -252,7 +314,8 @@ fit_ds_pheno_model <- function(
       .packages     = c('glmmTMB', 'scales') # required packages
     ) %dopar% {
       ds_pheno_singlefit(
-        comps, idx_comp, phenopos, weights, experiment, batches, nbatches, wconf
+        comps, idx_comp, phenopos, weights, experiment, experiment_inter,
+        batches, nbatches, wconf
       )
     }
     if (verbose) {
@@ -266,9 +329,14 @@ fit_ds_pheno_model <- function(
     ## Apply multiple testing correction to predictor p-values
     res$AdjPVal <- stats::p.adjust(res$PValue, method = 'BH')
     
-    ## Apply multiple testing correction to confounder p-values
+    ## Apply multiple testing correction to confounder and interaction p-values
     if (wconf) {
-      res$AdjPValConfounder <- stats::p.adjust(res$PValueConfounder, method = 'BH')
+      res$AdjPValConfounder <-
+        stats::p.adjust(res$PValueConfounder, method = 'BH')
+      if (interaction) {
+        res$AdjPValInteraction <-
+          stats::p.adjust(res$PValueInteraction, method = 'BH')
+      }
     }
     
     ## Extract random intercepts and their confidence interval estimates
@@ -298,8 +366,8 @@ fit_ds_pheno_model <- function(
           utils::setTxtProgressBar(pb, idx_comp)
         }
         ds_pheno_singlefit(
-          comps, idx_comp, phenopos, weights, experiment, batches, nbatches,
-          wconf
+          comps, idx_comp, phenopos, weights, experiment, experiment_inter,
+          batches, nbatches, wconf
         )
       }
     )
@@ -315,7 +383,12 @@ fit_ds_pheno_model <- function(
     
     ## Apply multiple testing correction to confounder p-values
     if (wconf) {
-      res$AdjPValConfounder <- stats::p.adjust(res$PValueConfounder, method = 'BH')
+      res$AdjPValConfounder <-
+        stats::p.adjust(res$PValueConfounder, method = 'BH')
+      if (interaction) {
+        res$AdjPValInteraction <-
+          stats::p.adjust(res$PValueInteraction, method = 'BH')
+      }
     }
     
     ## Extract random intercepts and their confidence interval estimates

@@ -29,14 +29,24 @@ fit_da_model <- function(
     annotation,         # sample-level annotation
     predictor,          # biological predictor to be modelled
     confounders = NULL, # confounders: Batch and/or 1 biological variable
-    famstr = FALSE      # whether annotation$FamilyID should be used to account
+    famstr = FALSE,     # whether annotation$FamilyID should be used to account
     # for siblings using fixed intercepts
+    interaction = FALSE # whether to also test potential interaction between
+    # predictor and biological confounder
 ) {
   
-  ## Only allow one biological confounder
-  if (!is.null(confounders)) {
+  ## Resolve specification of biological confounders
+  wconf <- !is.null(confounders)
+  if (wconf) {
     if (length(confounders[confounders!='Batch'])>1) {
       stop('Only one biological confounder at a time is currently allowed')
+    }
+  } else {
+    if (interaction) {
+      stop(
+        'Cannot model interaction term in the absence ',
+        'of a biological confounder'
+      )
     }
   }
   
@@ -50,7 +60,8 @@ fit_da_model <- function(
       } else {
         c(predictor, confounders)
       },
-    random_effects = c() # no random effects allowed in edgeR model
+    random_effects = c(), # no random effects allowed in edgeR model
+    interactions   = FALSE
   )
   design     <- experiment$Design
   na_samples <- experiment[['NA']]
@@ -90,12 +101,15 @@ fit_da_model <- function(
     names(p) <-
     names(p_adj) <- comps
   
-  ## Conduct likelihood ratio tests and extract fitted params for counfounder
-  logfcs_conf <- fcs_conf <- p_conf <- p_adj_conf <- NA
+  ## Initialise fitted params for confounder and interaction
+  logfcs_conf  <- fcs_conf <- p_conf <- p_adj_conf <- NA
+  inter_logfcs <- inter_fcs <- inter_p <- inter_p_adj <- NA
   bio_conf    <- confounders[confounders!='Batch'] # do not consider batch here
   cont_conf   <- NULL # continuous confounder?
-  if (!is.null(bio_conf) && length(bio_conf)>0) { # confounder specified
+  conf_spec   <- !is.null(bio_conf) && length(bio_conf)>0 # confounder specified
+  if (conf_spec) {
     
+    ## Conduct likelihood ratio tests and extract fitted params for confounder
     lrt_conf    <- edgeR::glmLRT(fit, coef = ncol(fit$design))
     
     logfcs_conf <- lrt_conf$table$logFC                     # log fold changes
@@ -108,19 +122,60 @@ fit_da_model <- function(
       names(p_adj_conf) <- comps
     
     cont_conf <- is.numeric(experiment$Data[, bio_conf])
+    
+    if (interaction) {
+      
+      ## Train models with interaction term
+      experiment <- prep_experiment(
+        files          = samples,
+        annotation     = annotation,
+        fixed_effects  = 
+          if (famstr) {
+            c(predictor, c('Batch', confounder), 'FamilyID')
+          } else {
+            c(predictor, c('Batch', confounder))
+          },
+        random_effects = c(), # no random effects allowed in edgeR model
+        interactions = TRUE
+      )
+      design     <- inter_experiment$Design
+      y_disp <- edgeR::estimateDisp(y, design, robust = TRUE)
+      suppressWarnings({
+        fit <- edgeR::glmFit(y_disp, design)
+      })
+      
+      ## Conduct likelihood ratio tests for interaction term
+      lrt    <- edgeR::glmLRT(fit, coef = ncol(fit))
+      
+      ## Extract fitted parameters for interaction term
+      inter_logfcs <- lrt$table$logFC                   
+      inter_fcs    <- sign(inter_logfcs)*(2^abs(inter_logfcs))      
+      inter_p      <- lrt$table$PValue                  
+      inter_p_adj  <- stats::p.adjust(inter_p, method = 'BH') 
+      names(inter_logfcs) <-
+        names(inter_fcs) <-
+        names(inter_p) <-
+        names(inter_p_adj) <- comps
+    }
   }
   
   ## Gather fitted and post-hoc stats
   res <- data.frame(
-    'Compartment'       = comps,
-    'logFC'             = logfcs,
-    'FC'                = fcs,
-    'PValue'            = p,
-    'AdjPVal'           = p_adj,
-    'logFCConfounder'   = logfcs_conf,
-    'FCConfounder'      = fcs_conf,
-    'PValueConfounder'  = p_conf,
-    'AdjPValConfounder' = p_adj_conf
+    'Compartment'        = comps,
+    'logFC'              = logfcs,
+    'FC'                 = fcs,
+    'PValue'             = p,
+    'AdjPVal'            = p_adj,
+    
+    'logFCConfounder'    = logfcs_conf,
+    'FCConfounder'       = fcs_conf,
+    'PValueConfounder'   = p_conf,
+    'AdjPValConfounder'  = p_adj_conf,
+    
+    'logFCInteraction'   = inter_logfcs,
+    'FCInteraction'      = inter_fcs,
+    'PValueInteraction'  = inter_p,
+    'AdjPValInteraction' = inter_p_adj
   )
   
   ## Add metadata
@@ -128,6 +183,7 @@ fit_da_model <- function(
   attributes(res)$ContinuousConfounder <- cont_conf
   attributes(res)$na_annotation <-
     na_samples # samples excluded due to missing annotation
+  attributes(res)$confounder_specified <- conf_spec
   
   res
 }

@@ -53,11 +53,11 @@ message('Performing differential expression analyses')
 
 message('(1/', n_out, ') Differential Abundance tests')
 res_fsom_da <- test_da(
-  counts      = inputs$counts,
-  annotation  = annotation,
-  predictors  = predictors,  # potential drivers of DE
-  confounders = confounders, # effects to disentangle from predictors
-  verbose     = TRUE
+  counts       = inputs$counts,
+  annotation   = annotation,
+  predictors   = predictors,  # potential drivers of DE
+  confounders  = confounders, # effects to disentangle from predictors
+  verbose      = TRUE
 )
 saveRDS(res_fsom_da, fname_fsom_da)
 

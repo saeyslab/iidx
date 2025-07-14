@@ -210,13 +210,14 @@ sig_level <- function(p, prefix = TRUE) {
 ## Function: design linear modelling experiment ----
 
 prep_experiment <- function(
-  files,            # names of samples to include in experiment
-  annotation,       # sample-level annotation
-  fixed_effects,    # columns of `annotation` to model as fixed effects
-  random_effects,   # columns of `annotation`to model as random effects
-  y        = NULL,  # outcome values per sample (if only 1 compartment tested)
-  olre     = FALSE, # whether to model observation-level random effects
-  force_ls = FALSE  # whether to include LHS of formula even if `y` not given
+    files,               # names of samples to include in experiment
+    annotation,          # sample-level annotation
+    fixed_effects,       # columns of `annotation` to model as fixed effects
+    random_effects,      # columns of `annotation`to model as random effects
+    y        = NULL,     # outcome values per sample (if only 1 compartment tested)
+    olre     = FALSE,    # whether to model observation-level random effects
+    force_ls = FALSE,    # whether to include LHS of formula even if `y` not given
+    interactions = FALSE # whether to include interactions in model formula
 ) {
   
   ## Check whether all samples are included in the annotation data frame
@@ -252,11 +253,6 @@ prep_experiment <- function(
         levels = c(FALSE, TRUE)
       )
     }
-  }
-  
-  ## Convert batch labels to factors
-  if ('Batch' %in% colnames(ann)) {
-    ann$Batch <- as.factor(ann$Batch)
   }
   
   ## Assume unpaired design
@@ -299,6 +295,12 @@ prep_experiment <- function(
     )
   }
   
+  if (interactions) {
+    
+    fe <- fixed_effects[!fixed_effects%in%c('Batch', 'FamilyID')]
+    rhs <- paste0(rhs, ' + ', paste(fe, collapse = ':'))
+  }
+  
   ## Resolve LHS of model formula
   if (!is.null(y)) {
     lhs <- 'y'
@@ -312,7 +314,7 @@ prep_experiment <- function(
   ## Create design matrix
   design <- stats::model.matrix(
     object = stats::as.formula(
-      paste0('~', paste(fixed_effects, collapse = ' + '))
+      paste0('~', rhs)
     ),
     data = d
   )
@@ -320,6 +322,11 @@ prep_experiment <- function(
   ## Fill in LHS if needed
   if (is.null(y) && force_ls) {
     formula <- stats::as.formula(paste0('y ~', rhs))
+  }
+  
+  ## Convert batch labels to factors
+  if ('Batch' %in% colnames(d)) {
+    d$Batch <- as.factor(d$Batch)
   }
   
   list(
@@ -356,8 +363,8 @@ prep_inputs <- function(
   ## Check that rows (samples) are aligned between the feature matrices
   if (
     nrow(mc_counts)!=nrow(mc_perc) ||
-      nrow(mc_counts)!=nrow(mc_mfi) ||
-      (!is.null(mc_percpos) && nrow(mc_counts)!=nrow(mc_percpos))
+    nrow(mc_counts)!=nrow(mc_mfi) ||
+    (!is.null(mc_percpos) && nrow(mc_counts)!=nrow(mc_percpos))
   ) {
     stop('Row (sample) counts are not the same between the feature matrices')
   }
@@ -506,8 +513,8 @@ match_channel_names <- function(
 ## Function: extract confounders from DE results ----
 
 get_confounders <- function(
-  res,      # DE analysis results
-  predictor # predictor of interest
+    res,      # DE analysis results
+    predictor # predictor of interest
 ) {
   
   if (attributes(res)$AnalysisType=='Differential Abundance') { # DA analysis
@@ -534,7 +541,7 @@ get_confounders <- function(
 ## Function: extract predictors from DE results ----
 
 get_predictors <- function(
-  res # DE analysis results
+    res # DE analysis results
 ) {
   
   if (attributes(res)$AnalysisType=='Differential Abundance') { # DA analysis
@@ -719,10 +726,10 @@ ParallelAggregate <- function(
 ## Function: resolve which samples were used per test ----
 
 samples_per_test <- function(
-  res,               # DE analysis results
-  predictor,         # predictor of interest
-  confounder = NULL, # confounder of interest
-  comps      = NULL  # compartments of interest
+    res,               # DE analysis results
+    predictor,         # predictor of interest
+    confounder = NULL, # confounder of interest
+    comps      = NULL  # compartments of interest
 ) {
   
   ## Resolve analysis type
@@ -824,15 +831,15 @@ samples_per_test <- function(
 ## Function: compute robustness rates for DS results ----
 
 robustness_rate_per_test <- function(
-  res,                # DS analysis results
-  robustness,         # list of robustness matrices per signal filter strength
-  samples_mat = NULL, # matrix created by `samples_per_test` if pre-computed
-  predictor   = NULL, # biological predictor of interest
-  confounder  = NULL, # biological confounder of interest
-  comps       = NULL, # compartments of interest
-  tidy        = FALSE # whether to return as list of data frames per cut-off
+    res,                # DS analysis results
+    robustness,         # list of robustness matrices per signal filter strength
+    samples_mat = NULL, # matrix created by `samples_per_test` if pre-computed
+    predictor   = NULL, # biological predictor of interest
+    confounder  = NULL, # biological confounder of interest
+    comps       = NULL, # compartments of interest
+    tidy        = FALSE # whether to return as list of data frames per cut-off
 ) {
-
+  
   ## Check if predictor of samples-per-test matrix provided
   if (is.null(samples_mat)) {
     if (is.null(predictor)) {

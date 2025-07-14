@@ -27,11 +27,13 @@ source('04a_TestsDS-Pheno.R')
 ## Function: perform all DA tests ----
 
 test_da <- function(
-    counts,             # cell counts per metacluster and sample
-    annotation,         # sample-level annotation
-    predictors  = NULL, # biological predictors
-    confounders = c(),  # biological confounders
-    verbose     = TRUE  # whether to show progress
+    counts,               # cell counts per metacluster and sample
+    annotation,           # sample-level annotation
+    predictors   = NULL,  # biological predictors
+    confounders  = c(),   # biological confounders
+    interactions = FALSE, # whether to also test for predictor-confounder
+                          # interactions
+    verbose      = TRUE   # whether to show progress
 ) {
   
   ## Save input sample names before any filtering
@@ -82,7 +84,7 @@ test_da <- function(
   names(na_annotation_joint_conf0) <- predictors
   names(na_annotation_batch_conf0) <- paste0('Batch', batches)
   
-  ## Initialise joint & batch-wise models with confounders ----
+  ## Initialise joint & batch-wise models with confounders
   if (wconf) {
     
     res_joint_conf1 <-
@@ -119,7 +121,8 @@ test_da <- function(
       annotation  = annotation,
       predictor   = predictor,
       confounders = c('Batch'),
-      famstr      = famstr
+      famstr      = famstr,
+      interaction = FALSE
     )
     
     ## Store fitted params and samples excluded due to missing labels
@@ -155,7 +158,8 @@ test_da <- function(
             annotation  = annotation,
             predictor   = predictor,
             confounders = c('Batch', confounder),
-            famstr      = famstr
+            famstr      = famstr,
+            interaction = interactions
           )
           
           ## Store fitted params and samples excluded due to missing labels
@@ -225,7 +229,8 @@ test_da <- function(
         annotation  = batch_annot,
         predictor   = predictor,
         confounders = NULL,
-        famstr      = famstr
+        famstr      = famstr,
+        interaction = FALSE
       )
       
       ## Store fitted params and samples excluded due to missing labels
@@ -261,7 +266,9 @@ test_da <- function(
               annotation  = batch_annot,
               predictor   = predictor,
               confounders = confounder,
-              famstr      = famstr
+              famstr      = famstr,
+              interaction = FALSE # no interaction term in batch-restricted
+                                  # setting
             )
             
             ## Store fitted params and samples excluded due to missing labels
@@ -310,12 +317,14 @@ test_da <- function(
 ## Function: perform all DS tests ----
 
 test_ds <- function(
-    annotation,          # sample-level annotation
+    annotation,            # sample-level annotation
     phenopos      = NULL,  # phenopositivity rates per compartment per sample
     mfi           = NULL,  # MFI values per compartment per sample
     counts        = NULL,  # counts per compartment per sample
     predictors    = NULL,  # biological predictors
     confounders   = c(),   # biological confounders
+    interactions  = FALSE, # whether to also test for predictor-confounder
+                           # interactions
     state_markers = NULL,  # all state markers
     parallel      = FALSE, # whether to use multi-threading
     verbose       = TRUE   # whether to show progress
@@ -441,28 +450,30 @@ test_ds <- function(
       if (outcome=='phenopos') {
         
         fit_ds_pheno_model(
-          phenopos   = perc_pos,
-          weights    = weights,
-          samples    = samples,
-          annotation = annotation,
-          predictor  = predictor,
-          confounder = NULL,
-          famstr     = famstr,
-          parallel   = parallel,
-          verbose    = verbose
+          phenopos    = perc_pos,
+          weights     = weights,
+          samples     = samples,
+          annotation  = annotation,
+          predictor   = predictor,
+          confounder  = NULL,
+          famstr      = famstr,
+          interaction = FALSE,
+          parallel    = parallel,
+          verbose     = verbose
         )
       } else if (outcome=='mfi') {
         
         fit_ds_mfi_model(
-          mfi        = mfi_signal,
-          weights    = weights,
-          samples    = samples,
-          annotation = annotation,
-          predictor  = predictor,
-          confounder = NULL,
-          famstr     = famstr,
-          parallel   = parallel,
-          verbose    = verbose
+          mfi         = mfi_signal,
+          weights     = weights,
+          samples     = samples,
+          annotation  = annotation,
+          predictor   = predictor,
+          confounder  = NULL,
+          famstr      = famstr,
+          interaction = FALSE,
+          parallel    = parallel,
+          verbose     = verbose
         )
       }
     res_conf0[[predictor]]   <- this_res$main
@@ -504,28 +515,30 @@ test_ds <- function(
             if (outcome=='phenopos') {
               
               fit_ds_pheno_model(
-                phenopos   = perc_pos,
-                samples    = samples,
-                weights    = weights,
-                annotation = annotation,
-                predictor  = predictor,
-                confounder = confounder,
-                famstr     = famstr,
-                parallel   = parallel,
-                verbose    = verbose
+                phenopos    = perc_pos,
+                samples     = samples,
+                weights     = weights,
+                annotation  = annotation,
+                predictor   = predictor,
+                confounder  = confounder,
+                famstr      = famstr,
+                interaction = interactions,
+                parallel    = parallel,
+                verbose     = verbose
               )
             } else if (outcome=='mfi') {
               
               fit_ds_mfi_model(
-                mfi        = mfi_signal,
-                weights    = weights,
-                samples    = samples,
-                annotation = annotation,
-                predictor  = predictor,
-                confounder = confounder,
-                famstr     = famstr,
-                parallel   = parallel,
-                verbose    = verbose
+                mfi         = mfi_signal,
+                weights     = weights,
+                samples     = samples,
+                annotation  = annotation,
+                predictor   = predictor,
+                confounder  = confounder,
+                famstr      = famstr,
+                interaction = interactions,
+                parallel    = parallel,
+                verbose     = verbose
               )
             }
           res_conf1[[predictor]][[confounder]]   <- this_res$main
