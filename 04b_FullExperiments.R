@@ -50,6 +50,9 @@ test_da <- function(
   npred   <- length(predictors)
   nconf   <- length(confounders)
   wconf   <- nconf>0
+  if (!wconf) {
+    interactions <- FALSE
+  }
   famstr  <- 'FamilyID'%in%colnames(annotation)&&
     length(unique(annotation$FamilyID[!is.na(annotation$FamilyID)]))>1
   
@@ -384,6 +387,9 @@ test_ds <- function(
   ## Resolve predictors, their covariates, batches & family structure
   nconf <- length(confounders)
   wconf <- nconf>0
+  if (!wconf) {
+    interactions <- FALSE
+  }
   npred <- length(predictors)
   ncomp <- length(comps)
   batches <- unique(
