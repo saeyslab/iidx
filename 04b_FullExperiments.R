@@ -27,13 +27,13 @@ source('04a_TestsDS-Pheno.R')
 ## Function: perform all DA tests ----
 
 test_da <- function(
-    counts,               # cell counts per metacluster and sample
-    annotation,           # sample-level annotation
-    predictors   = NULL,  # biological predictors
-    confounders  = c(),   # biological confounders
+    counts,              # cell counts per metacluster and sample
+    annotation,          # sample-level annotation
+    predictors   = NULL, # biological predictors
+    confounders  = c(),  # biological confounders
     interactions = TRUE, # whether to also test for predictor-confounder
-                          # interactions
-    verbose      = TRUE   # whether to show progress
+                         # interactions
+    verbose      = TRUE  # whether to show progress
 ) {
   
   ## Save input sample names before any filtering
@@ -426,6 +426,11 @@ test_ds <- function(
   names(na_annotation_conf0) <-
     names(na_outcome_conf0) <- predictors
   
+  res_conf1   <- NULL
+  inter_conf1 <- NULL
+  rsq_conf1   <- NULL
+  na_annotation_conf1 <- NULL
+  na_outcome_conf1    <- NULL
   if (wconf) { # biological confounder specified
     
     ## Initialise fits, intercepts per batch and R^2 per batch w/ confounders
