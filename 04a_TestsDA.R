@@ -125,8 +125,10 @@ fit_da_model <- function(
     
     if (interaction) {
       
+      confounder <- confounders[!confounders%in%c('Batch', 'FamilyID')]
+      
       ## Train models with interaction term
-      experiment <- prep_experiment(
+      inter_experiment <- prep_experiment(
         files          = samples,
         annotation     = annotation,
         fixed_effects  = 
@@ -187,3 +189,4 @@ fit_da_model <- function(
   
   res
 }
+
