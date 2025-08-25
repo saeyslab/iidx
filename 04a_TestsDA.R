@@ -38,8 +38,8 @@ fit_da_model <- function(
   ## Resolve specification of biological confounders
   wconf <- !is.null(confounders)
   if (wconf) {
-    if (length(confounders[confounders!='Batch'])>1) {
-      stop('Only one biological confounder at a time is currently allowed')
+    if (length(confounders[!confounders%in%'Batch'])>1) {
+      stop('Only one biological confounder at a time is currently allowed')  
     }
   } else {
     if (interaction) {
@@ -50,15 +50,21 @@ fit_da_model <- function(
     }
   }
   
+  ## Check additional covariate to add (for post-hoc testing)
+  ecov <- Sys.getenv('IIDX_EXTRA_COVARIATE')
+  if (ecov=='') {
+    ecov <- NULL
+  }
+  
   ## Set up experimental design
   experiment <- prep_experiment(
     files          = samples,
     annotation     = annotation,
     fixed_effects  = 
       if (famstr) {
-        c(predictor, confounders, 'FamilyID')
+        c(predictor, confounders, ecov, 'FamilyID')
       } else {
-        c(predictor, confounders)
+        c(predictor, confounders, ecov)
       },
     random_effects = c(), # no random effects allowed in edgeR model
     interactions   = FALSE
@@ -125,22 +131,20 @@ fit_da_model <- function(
     
     if (interaction) {
       
-      confounder <- confounders[!confounders%in%c('Batch', 'FamilyID')]
-      
       ## Train models with interaction term
-      inter_experiment <- prep_experiment(
+      experiment <- prep_experiment(
         files          = samples,
         annotation     = annotation,
         fixed_effects  = 
           if (famstr) {
-            c(predictor, c('Batch', confounder), 'FamilyID')
+            c(predictor, confounders, 'FamilyID')
           } else {
-            c(predictor, c('Batch', confounder))
+            c(predictor, confounders)
           },
         random_effects = c(), # no random effects allowed in edgeR model
         interactions = TRUE
       )
-      design     <- inter_experiment$Design
+      design     <- experiment$Design
       y_disp <- edgeR::estimateDisp(y, design, robust = TRUE)
       suppressWarnings({
         fit <- edgeR::glmFit(y_disp, design)
@@ -186,7 +190,7 @@ fit_da_model <- function(
   attributes(res)$na_annotation <-
     na_samples # samples excluded due to missing annotation
   attributes(res)$confounder_specified <- conf_spec
+  attributes(res)$IIDX_EXTRA_CONFOUNDER <- ecov
   
   res
 }
-
