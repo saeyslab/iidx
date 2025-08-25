@@ -32,7 +32,7 @@ test_da <- function(
     predictors   = NULL, # biological predictors
     confounders  = c(),  # biological confounders
     interactions = TRUE, # whether to also test for predictor-confounder
-                         # interactions
+    # interactions
     verbose      = TRUE  # whether to show progress
 ) {
   
@@ -160,7 +160,7 @@ test_da <- function(
             samples     = samples,
             annotation  = annotation,
             predictor   = predictor,
-            confounders = c('Batch', confounder),
+            confounders = c(confounder, 'Batch'),
             famstr      = famstr,
             interaction = interactions
           )
@@ -271,7 +271,7 @@ test_da <- function(
               confounders = confounder,
               famstr      = famstr,
               interaction = FALSE # no interaction term in batch-restricted
-                                  # setting
+              # setting
             )
             
             ## Store fitted params and samples excluded due to missing labels
@@ -327,7 +327,7 @@ test_ds <- function(
     predictors    = NULL,  # biological predictors
     confounders   = c(),   # biological confounders
     interactions  = TRUE, # whether to also test for predictor-confounder
-                           # interactions
+    # interactions
     state_markers = NULL,  # all state markers
     parallel      = FALSE, # whether to use multi-threading
     verbose       = TRUE   # whether to show progress
