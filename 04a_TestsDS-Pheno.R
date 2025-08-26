@@ -29,15 +29,11 @@ ds_pheno_singlefit <- function(
     phenopos,         # phenopositivity rates per compartment per sample
     weights,          # weights per sample
     experiment,       # experiment design generated using `prep_experiment`
-    experiment_inter, # experiment design from `prep_experiment` with
-                      # interaction between predictor and confounder (or NULL)
+    interaction,
     batches,          # batch per sample
     nbatches,         # number of unique batches
     wconf             # whether confounder is specified
 ) {
-  
-  ## Resolve interaction modelling
-  interaction <- !is.null(experiment_inter)
   
   ## Gather inputs for model
   comp <- comps[idx_comp]
@@ -175,17 +171,10 @@ ds_pheno_singlefit <- function(
   ## Resolve significance and magnitude of interaction
   if (interaction) {
     
-    suppressMessages({
-      suppressWarnings({
-        fit <- glmmTMB::glmmTMB(
-          formula = experiment_inter$Formula,
-          data    = d,
-          weights = d$w,
-          family  = glmmTMB::beta_family(link = 'logit')
-        )
-      })
-    })
-    idx_inter   <- ncol(stats::coef(fit)$cond$Batch)
+    term <- paste0(
+      colnames(experiment$Design)[2], ':', colnames(experiment$Design)[3]
+    )
+    idx_inter <- which(rownames(summary(fit)$coefficients)==term)
     coeff_inter <- unlist(stats::coef(fit)$cond$Batch[1, idx_inter]) # effect
     pval_inter  <- summary(fit)$coefficients$cond[, 'Pr(>|z|)'][idx_inter] # p-value
     pval_inter[is.na(pval_inter)] <- 1.
@@ -212,9 +201,9 @@ fit_ds_pheno_model <- function(
     predictor,           # biological predictor to be modelled
     confounder = NULL,   # biological confounder to be modelled
     famstr     = FALSE,  # whether annotation$FamilyID should be used to account
-                         # for siblings using fixed intercepts
+    # for siblings using fixed intercepts
     interaction = FALSE, # whether to also test potential interaction between
-                         # predictor and biological confounder
+    # predictor and biological confounder
     parallel   = FALSE,  # whether to use multi-threading
     verbose    = TRUE    # whether to show progress
 ) {
@@ -230,11 +219,17 @@ fit_ds_pheno_model <- function(
     )
   }
   
+  ## Check if an extra covariate should be taken into account
+  extra_covar <- Sys.getenv('IIDX_EXTRA_COVARIATE')
+  if (extra_covar=='') {
+    extra_covar <- NULL
+  }
+  
   ## Set up experiment design
   experiment <- prep_experiment(
     samples,
     annotation,
-    fixed_effects  = c(predictor, confounder),
+    fixed_effects  = c(predictor, confounder, extra_covar),
     random_effects =
       if (famstr) {
         c('Batch', 'FamilyID')
@@ -242,28 +237,9 @@ fit_ds_pheno_model <- function(
         'Batch'
       }, # (batch and maybe family ID modelled via random intercepts)
     force_ls = TRUE,
-    interactions = FALSE
+    interactions = interaction
   )
   na_annotation <- experiment[['NA']]
-  
-  ## Resolve interaction modelling
-  experiment_inter <- NULL
-  if (interaction) {
-    
-    experiment_inter <- prep_experiment(
-      samples,
-      annotation,
-      fixed_effects = c(predictor, confounder),
-      random_effects =
-        if (famstr) {
-          c('Batch', 'FamilyID')
-        } else {
-          'Batch'
-        }, # (batch and maybe family ID modelled via random intercepts)
-      force_ls = TRUE,
-      interactions = TRUE
-    )
-  }
   
   ## Exclude samples with missing predictor/covariate values
   mask       <- colnames(phenopos)%in%na_annotation
@@ -314,7 +290,7 @@ fit_ds_pheno_model <- function(
       .packages     = c('glmmTMB', 'scales') # required packages
     ) %dopar% {
       ds_pheno_singlefit(
-        comps, idx_comp, phenopos, weights, experiment, experiment_inter,
+        comps, idx_comp, phenopos, weights, experiment, interaction,
         batches, nbatches, wconf
       )
     }

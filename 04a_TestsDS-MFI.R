@@ -29,15 +29,11 @@ ds_mfi_singlefit <- function(
     mfi,              # sample-wise MFI values per compartment
     weights,          # weights per sample
     experiment,       # experiment design from `prep_experiment`
-    experiment_inter, # experiment design from `prep_experiment` with
-                      # interaction between predictor and confounder (or NULL)
+    interaction,
     batches,          # batch per sample
     nbatches,         # number of unique batches
     wconf             # whether confounder is specified
 ) {
-  
-  ## Resolve interaction modelling
-  interaction <- !is.null(experiment_inter)
   
   ## Gather inputs for model
   comp <- comps[idx_comp]
@@ -162,16 +158,10 @@ ds_mfi_singlefit <- function(
   ## Resolve significance and magnitude of interaction
   if (interaction) {
     
-    suppressMessages({
-      suppressWarnings({
-        fit <- lmerTest::lmer(
-          formula = experiment_inter$Formula,
-          data    = d,
-          weights = d$w
-        )
-      })
-    })
-    idx_inter <- nrow(summary(fit)$coefficients)
+    term <- paste0(
+      colnames(experiment$Design)[2], ':', colnames(experiment$Design)[3]
+    )
+    idx_inter <- which(rownames(summary(fit)$coefficients)==term)
     pval_inter  <- summary(fit)$coefficients[, 'Pr(>|t|)'][idx_inter]
     coeff_inter <- unlist(stats::coef(fit)$Batch[1, idx_inter])
     res['PValueInteraction'] <- pval_inter
@@ -216,11 +206,17 @@ fit_ds_mfi_model <- function(
     )
   }
   
+  ## Check if an extra covariate should be taken into account
+  extra_covar <- Sys.getenv('IIDX_EXTRA_COVARIATE')
+  if (extra_covar=='') {
+    extra_covar <- NULL
+  }
+  
   ## Set up experiment design
   experiment <- prep_experiment(
     samples,
     annotation,
-    fixed_effects = c(predictor, confounder),
+    fixed_effects = c(predictor, confounder, extra_covar),
     random_effects =
       if (famstr) {
         c('Batch', 'FamilyID')
@@ -228,28 +224,9 @@ fit_ds_mfi_model <- function(
         'Batch'
       }, # (batch and maybe family ID modelled via random intercepts)
     force_ls = TRUE,
-    interactions = FALSE
+    interactions = interaction
   )
   na_annotation <- experiment[['NA']]
-  
-  ## Resolve interaction modelling
-  experiment_inter <- NULL
-  if (interaction) {
-    
-    experiment_inter <- prep_experiment(
-      samples,
-      annotation,
-      fixed_effects = c(predictor, confounder),
-      random_effects =
-        if (famstr) {
-          c('Batch', 'FamilyID')
-        } else {
-          'Batch'
-        }, # (batch and maybe family ID modelled via random intercepts)
-      force_ls = TRUE,
-      interactions = TRUE
-    )
-  }
   
   ## Exclude samples with missing predictor/covariate values
   mask       <- colnames(mfi)%in%na_annotation
@@ -300,7 +277,7 @@ fit_ds_mfi_model <- function(
       .packages     = c('lme4', 'lmerTest')  # required packages
     ) %dopar% {
       ds_mfi_singlefit(
-        comps, idx_comp, mfi, weights, experiment, experiment_inter, batches,
+        comps, idx_comp, mfi, weights, experiment, interaction, batches,
         nbatches, wconf
       )
     }

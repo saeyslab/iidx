@@ -298,7 +298,14 @@ prep_experiment <- function(
   if (interactions) {
     
     fe <- fixed_effects[!fixed_effects%in%c('Batch', 'FamilyID')]
-    rhs <- paste0(rhs, ' + ', paste(fe, collapse = ':'))
+    pairs <- apply(
+      combn(fe, m = 2),
+      MARGIN = 2,
+      FUN = function(pair) {
+        paste0(pair[1], ":", pair[2])
+      }
+    )
+    rhs <- paste0(rhs, ' + ', paste(pairs, collapse = ' + '))
   }
   
   ## Resolve LHS of model formula

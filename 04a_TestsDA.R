@@ -50,18 +50,24 @@ fit_da_model <- function(
     }
   }
   
+  ## Check if an extra covariate should be taken into account
+  extra_covar <- Sys.getenv('IIDX_EXTRA_COVARIATE')
+  if (extra_covar=='') {
+    extra_covar <- NULL
+  }
+  
   ## Set up experimental design
   experiment <- prep_experiment(
     files          = samples,
     annotation     = annotation,
     fixed_effects  = 
       if (famstr) {
-        c(predictor, confounders, 'FamilyID')
+        c(predictor, confounders, extra_covar, 'FamilyID')
       } else {
-        c(predictor, confounders)
+        c(predictor, confounders, extra_covar)
       },
     random_effects = c(), # no random effects allowed in edgeR model
-    interactions   = FALSE
+    interactions   = interaction
   )
   design     <- experiment$Design
   na_samples <- experiment[['NA']]
@@ -127,27 +133,10 @@ fit_da_model <- function(
       
       confounder <- confounders[!confounders%in%c('Batch', 'FamilyID')]
       
-      ## Train models with interaction term
-      inter_experiment <- prep_experiment(
-        files          = samples,
-        annotation     = annotation,
-        fixed_effects  = 
-          if (famstr) {
-            c(predictor, c('Batch', confounder), 'FamilyID')
-          } else {
-            c(predictor, c('Batch', confounder))
-          },
-        random_effects = c(), # no random effects allowed in edgeR model
-        interactions = TRUE
-      )
-      design     <- inter_experiment$Design
-      y_disp <- edgeR::estimateDisp(y, design, robust = TRUE)
-      suppressWarnings({
-        fit <- edgeR::glmFit(y_disp, design)
-      })
-      
       ## Conduct likelihood ratio tests for interaction term
-      lrt    <- edgeR::glmLRT(fit, coef = ncol(fit))
+      term <- paste0(colnames(fit$design)[2], ':', colnames(fit$design)[3])
+      idx  <- which(colnames(fit$design)==term)
+      lrt  <- edgeR::glmLRT(fit, coef = idx)
       
       ## Extract fitted parameters for interaction term
       inter_logfcs <- lrt$table$logFC                   
