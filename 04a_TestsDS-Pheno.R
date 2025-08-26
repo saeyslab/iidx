@@ -174,7 +174,7 @@ ds_pheno_singlefit <- function(
     term <- paste0(
       colnames(experiment$Design)[2], ':', colnames(experiment$Design)[3]
     )
-    idx_inter <- which(rownames(summary(fit)$coefficients)==term)
+    idx_inter <- which(rownames(summary(fit)$coefficients$cond)==term)
     coeff_inter <- unlist(stats::coef(fit)$cond$Batch[1, idx_inter]) # effect
     pval_inter  <- summary(fit)$coefficients$cond[, 'Pr(>|z|)'][idx_inter] # p-value
     pval_inter[is.na(pval_inter)] <- 1.
@@ -342,7 +342,7 @@ fit_ds_pheno_model <- function(
           utils::setTxtProgressBar(pb, idx_comp)
         }
         ds_pheno_singlefit(
-          comps, idx_comp, phenopos, weights, experiment, experiment_inter,
+          comps, idx_comp, phenopos, weights, experiment, interaction,
           batches, nbatches, wconf
         )
       }

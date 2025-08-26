@@ -329,7 +329,7 @@ fit_ds_mfi_model <- function(
           utils::setTxtProgressBar(pb, idx_comp)
         }
         ds_mfi_singlefit(
-          comps, idx_comp, mfi, weights, experiment, experiment_inter, batches,
+          comps, idx_comp, mfi, weights, experiment, interaction, batches,
           nbatches, wconf
         )
       }
