@@ -272,7 +272,7 @@ plot_volcano <- function(
   p <- p +
     ggplot2::labs(
       x        = xlab,
-      y        = bquote('-'*log[10]*' FDR'),
+      y        = bquote('-'*log[10]*' p'),
       title    = paste0(type, ' results by compartment'),
       subtitle = desc
     ) +
@@ -1581,19 +1581,19 @@ plot_comp_scatter <- function(
   margin <- 1e-5
   xl <- stats::quantile(
     x = if (!is.null(agg_unstained)) {
-        c(fsom$data[, ch1], agg_u@exprs[, ch1])
-      } else {
-        fsom$data[, ch1]
-      },
+      c(fsom$data[, ch1], agg_u@exprs[, ch1])
+    } else {
+      fsom$data[, ch1]
+    },
     probs = c(margin, 1.-margin),
     na.rm = TRUE
   )
   yl <- stats::quantile(
     x = if (!is.null(agg_unstained)) {
-        c(fsom$data[, ch2], agg_u@exprs[, ch2])
-      } else {
-        fsom$data[, ch2]
-      },
+      c(fsom$data[, ch2], agg_u@exprs[, ch2])
+    } else {
+      fsom$data[, ch2]
+    },
     probs = c(margin, 1.-margin),
     na.rm = TRUE
   )
@@ -2034,7 +2034,7 @@ plot_comp_quartiles <- function(
     )
     d$Cutoff <- cutoffs[d$Marker]
   }
-
+  
   ## Gather phenopositivity thresholds
   if (!is.null(thresholds)) {
     
@@ -2044,11 +2044,11 @@ plot_comp_quartiles <- function(
   ## Resolve whether to plot thresholds and/or noise cut-offs
   plot_thresholds <-
     !is.null(thresholds) &&
-     length(thresholds)>1 &&
-     sum(!is.na(d$Threshold))>0
+    length(thresholds)>1 &&
+    sum(!is.na(d$Threshold))>0
   plot_noise_cutoffs <-
     !is.null(noise) &&
-     sum(!is.na(d$Cutoff))>0
+    sum(!is.na(d$Cutoff))>0
   
   ## Resolve plot subtitle
   subtitle <- ''
