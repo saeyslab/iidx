@@ -31,7 +31,7 @@ test_da <- function(
     annotation,          # sample-level annotation
     predictors   = NULL, # biological predictors
     confounders  = c(),  # biological confounders
-    interactions = TRUE, # whether to also test for predictor-confounder
+    interactions = FALSE, # whether to also test for predictor-confounder
     batch_aware  = TRUE, # whether to model sample batches
     verbose      = TRUE  # whether to show progress
 ) {
@@ -332,7 +332,7 @@ test_ds <- function(
     counts        = NULL,  # counts per compartment per sample
     predictors    = NULL,  # biological predictors
     confounders   = c(),   # biological confounders
-    interactions  = TRUE, # whether to also test for predictor-confounder
+    interactions  = FALSE, # whether to also test for predictor-confounder
     # interactions
     batch_aware   = TRUE,
     state_markers = NULL,  # all state markers
