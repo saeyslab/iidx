@@ -32,7 +32,7 @@ test_da <- function(
     predictors   = NULL, # biological predictors
     confounders  = c(),  # biological confounders
     interactions = TRUE, # whether to also test for predictor-confounder
-    # interactions
+    batch_aware  = TRUE, # whether to model sample batches
     verbose      = TRUE  # whether to show progress
 ) {
   
@@ -123,7 +123,7 @@ test_da <- function(
       samples     = samples,
       annotation  = annotation,
       predictor   = predictor,
-      confounders = c('Batch'),
+      confounders = if (batch_aware) { 'Batch' } else { NULL },
       famstr      = famstr,
       interaction = FALSE
     )
@@ -160,7 +160,8 @@ test_da <- function(
             samples     = samples,
             annotation  = annotation,
             predictor   = predictor,
-            confounders = c(confounder, 'Batch'),
+            confounders =
+              if (batch_aware) { c(confounder, 'Batch') } else { confounder },
             famstr      = famstr,
             interaction = interactions
           )
@@ -178,115 +179,120 @@ test_da <- function(
   }
   close(pb)
   
-  ## Fit batch-wise models (input limited to samples in one batch)
-  if (verbose) {
-    message('Fitting single-batch models for ', nba, ' batches')
-  }
-  pb <- utils::txtProgressBar(
-    min = 0, max = npred*nba, style = 3
-  ) # progress bar
-  counter <- 0
-  for (idx_ba in seq_along(batches)) {
+  res_batch_conf0 <- na_annotation_batch_conf0 <-
+    res_batch_conf1 <- na_annotation_batch_conf1 <- NA
+  if (batch_aware) {
     
-    batch <- batches[idx_ba]
-    
-    ## Initialise models for this predictor per batch w/out confounders
-    res_batch_conf0[[idx_ba]] <-
-      vector(mode = 'list', length = npred)
-    names(res_batch_conf0[[idx_ba]]) <- predictors
-    
-    ## Initialise excluded samples for tests per batch w/out confounders
-    na_annotation_batch_conf0[[idx_ba]] <-
-      vector(mode = 'list', length = npred)
-    names(na_annotation_batch_conf0[[idx_ba]]) <- predictors
-    
-    if (wconf) {
-      
-      ## Initialise models for this predictor per batch w/ confounders
-      res_batch_conf1[[idx_ba]] <-
-        vector(mode = 'list', length = npred)
-      names(res_batch_conf1[[idx_ba]]) <- predictors
-      
-      ## Initialise excluded samples for tests per batch w/ confounders
-      na_annotation_batch_conf1[[idx_ba]] <-
-        vector(mode = 'list', length = npred)
-      names(na_annotation_batch_conf1[[idx_ba]]) <- predictors
+    ## Fit batch-wise models (input limited to samples in one batch)
+    if (verbose) {
+      message('Fitting single-batch models for ', nba, ' batches')
     }
-    
-    for (idx_pred in seq_along(predictors)) {
+    pb <- utils::txtProgressBar(
+      min = 0, max = npred*nba, style = 3
+    ) # progress bar
+    counter <- 0
+    for (idx_ba in seq_along(batches)) {
       
-      predictor   <- predictors[idx_pred]
-      batch_annot <- annotation[
-        annotation$Batch==batch &
-          annotation$FileName%in%colnames(cc), ,
-        drop = FALSE
-      ]
-      batch_samples <- batch_annot$FileName
+      batch <- batches[idx_ba]
       
-      data <- cc[, batch_samples, drop = FALSE]
+      ## Initialise models for this predictor per batch w/out confounders
+      res_batch_conf0[[idx_ba]] <-
+        vector(mode = 'list', length = npred)
+      names(res_batch_conf0[[idx_ba]]) <- predictors
       
-      ## Fit batch-restricted model w/out biological covariate term
-      fit <- fit_da_model(
-        counts      = data,
-        samples     = batch_samples, # input samples restricted to 1 batch
-        annotation  = batch_annot,
-        predictor   = predictor,
-        confounders = NULL,
-        famstr      = famstr,
-        interaction = FALSE
-      )
-      
-      ## Store fitted params and samples excluded due to missing labels
-      res_batch_conf0[[idx_ba]][[idx_pred]] <- fit
-      na_annotation_batch_conf0[[idx_ba]][[idx_pred]] <-
-        attributes(fit)$na_annotation
-      attributes(fit)$na_annotation <- NULL
+      ## Initialise excluded samples for tests per batch w/out confounders
+      na_annotation_batch_conf0[[idx_ba]] <-
+        vector(mode = 'list', length = npred)
+      names(na_annotation_batch_conf0[[idx_ba]]) <- predictors
       
       if (wconf) {
         
-        ## Determine biological confounders for this predictor
-        this_confs <- confounders[confounders!=predictor]
-        this_nconf <- length(this_confs)
-        if (this_nconf>0) {
+        ## Initialise models for this predictor per batch w/ confounders
+        res_batch_conf1[[idx_ba]] <-
+          vector(mode = 'list', length = npred)
+        names(res_batch_conf1[[idx_ba]]) <- predictors
+        
+        ## Initialise excluded samples for tests per batch w/ confounders
+        na_annotation_batch_conf1[[idx_ba]] <-
+          vector(mode = 'list', length = npred)
+        names(na_annotation_batch_conf1[[idx_ba]]) <- predictors
+      }
+      
+      for (idx_pred in seq_along(predictors)) {
+        
+        predictor   <- predictors[idx_pred]
+        batch_annot <- annotation[
+          annotation$Batch==batch &
+            annotation$FileName%in%colnames(cc), ,
+          drop = FALSE
+        ]
+        batch_samples <- batch_annot$FileName
+        
+        data <- cc[, batch_samples, drop = FALSE]
+        
+        ## Fit batch-restricted model w/out biological covariate term
+        fit <- fit_da_model(
+          counts      = data,
+          samples     = batch_samples, # input samples restricted to 1 batch
+          annotation  = batch_annot,
+          predictor   = predictor,
+          confounders = NULL,
+          famstr      = famstr,
+          interaction = FALSE
+        )
+        
+        ## Store fitted params and samples excluded due to missing labels
+        res_batch_conf0[[idx_ba]][[idx_pred]] <- fit
+        na_annotation_batch_conf0[[idx_ba]][[idx_pred]] <-
+          attributes(fit)$na_annotation
+        attributes(fit)$na_annotation <- NULL
+        
+        if (wconf) {
           
-          ## Initialise models for this predictor per confounder
-          res_batch_conf1[[idx_ba]][[idx_pred]] <-
-            vector(mode = 'list', length = this_nconf)
-          names(res_batch_conf1[[idx_ba]][[idx_pred]]) <- this_confs
-          
-          na_annotation_batch_conf1[[idx_ba]][[idx_pred]] <-
-            vector(mode = 'list', length = this_nconf)
-          names(na_annotation_batch_conf1[[idx_ba]][[idx_pred]]) <- this_confs
-          
-          for (idx_conf in seq_along(this_confs)) {
+          ## Determine biological confounders for this predictor
+          this_confs <- confounders[confounders!=predictor]
+          this_nconf <- length(this_confs)
+          if (this_nconf>0) {
             
-            confounder <- this_confs[idx_conf]
+            ## Initialise models for this predictor per confounder
+            res_batch_conf1[[idx_ba]][[idx_pred]] <-
+              vector(mode = 'list', length = this_nconf)
+            names(res_batch_conf1[[idx_ba]][[idx_pred]]) <- this_confs
             
-            ## Fit batch-restricted model w/ biological covariate term
-            fit <- fit_da_model(
-              counts      = data,
-              samples     = batch_samples, # input samples restricted to 1 batch
-              annotation  = batch_annot,
-              predictor   = predictor,
-              confounders = confounder,
-              famstr      = famstr,
-              interaction = FALSE # no interaction term in batch-restricted
-              # setting
-            )
+            na_annotation_batch_conf1[[idx_ba]][[idx_pred]] <-
+              vector(mode = 'list', length = this_nconf)
+            names(na_annotation_batch_conf1[[idx_ba]][[idx_pred]]) <- this_confs
             
-            ## Store fitted params and samples excluded due to missing labels
-            res_batch_conf1[[idx_ba]][[idx_pred]][[idx_conf]] <- fit
-            na_annotation_batch_conf1[[idx_ba]][[idx_pred]][[idx_conf]] <-
-              attributes(fit)$na_annotation
-            attributes(fit)$na_annotation <- NULL
+            for (idx_conf in seq_along(this_confs)) {
+              
+              confounder <- this_confs[idx_conf]
+              
+              ## Fit batch-restricted model w/ biological covariate term
+              fit <- fit_da_model(
+                counts      = data,
+                samples     = batch_samples, # input samples restricted to 1 batch
+                annotation  = batch_annot,
+                predictor   = predictor,
+                confounders = confounder,
+                famstr      = famstr,
+                interaction = FALSE # no interaction term in batch-restricted
+                # setting
+              )
+              
+              ## Store fitted params and samples excluded due to missing labels
+              res_batch_conf1[[idx_ba]][[idx_pred]][[idx_conf]] <- fit
+              na_annotation_batch_conf1[[idx_ba]][[idx_pred]][[idx_conf]] <-
+                attributes(fit)$na_annotation
+              attributes(fit)$na_annotation <- NULL
+            }
           }
         }
+        counter <- counter + 1
+        utils::setTxtProgressBar(pb, counter)
       }
-      counter <- counter + 1
-      utils::setTxtProgressBar(pb, counter)
     }
+    close(pb) 
   }
-  close(pb)
   
   ## Determine which predictors are continuous
   cont <- sapply(predictors, function(effect) is.numeric(annotation[, effect]))
@@ -328,6 +334,7 @@ test_ds <- function(
     confounders   = c(),   # biological confounders
     interactions  = TRUE, # whether to also test for predictor-confounder
     # interactions
+    batch_aware   = TRUE,
     state_markers = NULL,  # all state markers
     parallel      = FALSE, # whether to use multi-threading
     verbose       = TRUE   # whether to show progress
@@ -469,6 +476,7 @@ test_ds <- function(
           confounder  = NULL,
           famstr      = famstr,
           interaction = FALSE,
+          batch_aware = batch_aware,
           parallel    = parallel,
           verbose     = verbose
         )
@@ -483,6 +491,7 @@ test_ds <- function(
           confounder  = NULL,
           famstr      = famstr,
           interaction = FALSE,
+          batch_aware = batch_aware,
           parallel    = parallel,
           verbose     = verbose
         )
@@ -534,6 +543,7 @@ test_ds <- function(
                 confounder  = confounder,
                 famstr      = famstr,
                 interaction = interactions,
+                batch_aware = batch_aware,
                 parallel    = parallel,
                 verbose     = verbose
               )
@@ -548,6 +558,7 @@ test_ds <- function(
                 confounder  = confounder,
                 famstr      = famstr,
                 interaction = interactions,
+                batch_aware = batch_aware,
                 parallel    = parallel,
                 verbose     = verbose
               )

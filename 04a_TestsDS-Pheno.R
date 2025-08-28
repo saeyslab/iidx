@@ -29,7 +29,8 @@ ds_pheno_singlefit <- function(
     phenopos,         # phenopositivity rates per compartment per sample
     weights,          # weights per sample
     experiment,       # experiment design generated using `prep_experiment`
-    interaction,
+    batch_aware,      # are batches being modelled?
+    interaction,      # are interactions being modelled?
     batches,          # batch per sample
     nbatches,         # number of unique batches
     wconf             # whether confounder is specified
@@ -82,46 +83,56 @@ ds_pheno_singlefit <- function(
     })
   })
   
-  ## Estimate 95% confidence intervals for batch random intercepts (predictor)
-  ri <-
-    stats::coef(fit)$cond$Batch[, '(Intercept)'] # intercepts
-  re <-
-    as.data.frame(lme4::ranef(fit)) # all random-intercept errors
-  re <- re[re$grpvar=='Batch', ] # batch-intercept errors
-  z_crit <-
-    stats::qnorm(.975) # critical value for CI (for two-tailed Gaussian)
-  ci_min <- ri-z_crit*re$condsd # CI lower bounds
-  ci_max <- ri+z_crit*re$condsd # CI upper bounds
   
-  ## Transform random intercepts from logit to original feature space
-  sigmoid <- function(x) 1/(1+exp(-x))
-  t_ri     <- sigmoid(ri)
-  t_ci_min <- sigmoid(ci_min)
-  t_ci_max <- sigmoid(ci_max)
-  
-  ## Calculate goodness-of-fit estimate per batch
-  sr  <-
-    (y-sigmoid(predict(fit, newdata = d)))**2 # squared residuals
-  tot <-
-    (d$y-mean(d$y, na.rm = TRUE))**2 # total squares
-  rss <-
-    sum(sr, na.rm = TRUE) # residual sum of squares (RSS)
-  tss <-
-    sum(tot, na.rm = TRUE) # total sum of squares (TSS)
-  rss_batch <-
-    sapply(batches, function(b) sum(sr[d$Batch==b], na.rm = TRUE)) # batch RSS
-  names(rss_batch) <- batches
-  tss_batch <-
-    sapply(batches, function(b) sum(tot[d$Batch==b], na.rm = TRUE)) # batch TSS
-  names(tss_batch) <- batches
-  rsq <-
-    1-rss/tss # overall R^2
-  rsq_batch <-
-    sapply(batches, function(b) 1-rss_batch[[b]]/tss_batch[[b]]) # batch R^2
-  names(rsq_batch) <- batches
+  rsq <- re <- NA
+  if (batch_aware) {
+    
+    ## Estimate 95% confidence intervals for batch random intercepts (predictor)
+    ri <-
+      stats::coef(fit)$cond$Batch[, '(Intercept)'] # intercepts
+    re <-
+      as.data.frame(lme4::ranef(fit)) # all random-intercept errors
+    re <- re[re$grpvar=='Batch', ] # batch-intercept errors
+    z_crit <-
+      stats::qnorm(.975) # critical value for CI (for two-tailed Gaussian)
+    ci_min <- ri-z_crit*re$condsd # CI lower bounds
+    ci_max <- ri+z_crit*re$condsd # CI upper bounds
+    
+    ## Transform random intercepts from logit to original feature space
+    sigmoid <- function(x) 1/(1+exp(-x))
+    t_ri     <- sigmoid(ri)
+    t_ci_min <- sigmoid(ci_min)
+    t_ci_max <- sigmoid(ci_max)
+    
+    ## Calculate goodness-of-fit estimate per batch
+    sr  <-
+      (y-sigmoid(predict(fit, newdata = d)))**2 # squared residuals
+    tot <-
+      (d$y-mean(d$y, na.rm = TRUE))**2 # total squares
+    rss <-
+      sum(sr, na.rm = TRUE) # residual sum of squares (RSS)
+    tss <-
+      sum(tot, na.rm = TRUE) # total sum of squares (TSS)
+    rss_batch <-
+      sapply(batches, function(b) sum(sr[d$Batch==b], na.rm = TRUE)) # batch RSS
+    names(rss_batch) <- batches
+    tss_batch <-
+      sapply(batches, function(b) sum(tot[d$Batch==b], na.rm = TRUE)) # batch TSS
+    names(tss_batch) <- batches
+    rsq <-
+      1-rss/tss # overall R^2
+    rsq_batch <-
+      sapply(batches, function(b) 1-rss_batch[[b]]/tss_batch[[b]]) # batch R^2
+    names(rsq_batch) <- batches
+  }
   
   ## Extract fitted parameters for predictor
-  coeff <- unlist(stats::coef(fit)$cond$Batch[1, -1]) # effect
+  coeff <- # effect
+    if (batch_aware) {
+      unlist(stats::coef(fit)$cond$Batch[1, -1]) 
+    } else {
+      unlist(stats::coef(fit)$cond[[1]][1, -1]) 
+    }
   pval  <- summary(fit)$coefficients$cond[, 'Pr(>|z|)'][-1] # p-value
   pval[is.na(pval)] <- 1.
   
@@ -148,21 +159,26 @@ ds_pheno_singlefit <- function(
     res['oddsConfounder']    <- exp(coeff[2])
   }
   
-  ## Gather random intercept parameters per batch
-  random_intercepts <- data.frame(
-    'Compartment'           = rep(comp, times = nbatches),
-    'Batch'                 = batches,
-    'Intercept'             = t_ri,
-    'ConfidenceIntervalMin' = t_ci_min,
-    'ConfidenceIntervalMax' = t_ci_max
-  )
+  random_intercepts <- batch_rsq <- NA
+  if (batch_aware) {
+    
+    ## Gather random intercept parameters per batch
+    random_intercepts <- data.frame(
+      'Compartment'           = rep(comp, times = nbatches),
+      'Batch'                 = batches,
+      'Intercept'             = t_ri,
+      'ConfidenceIntervalMin' = t_ci_min,
+      'ConfidenceIntervalMax' = t_ci_max
+    )
+    
+    ## Gather goodness-of-fit estimates per batch
+    batch_rsq <- data.frame(
+      'Compartment'           = rep(comp, times = nbatches),
+      'Batch'                 = batches,
+      'Rsq'                   = rsq_batch
+    )
+  }
   
-  ## Gather goodness-of-fit estimates per batch
-  batch_rsq <- data.frame(
-    'Compartment'           = rep(comp, times = nbatches),
-    'Batch'                 = batches,
-    'Rsq'                   = rsq_batch
-  )
   
   ## Gather names of sampled excluded due to missing outcome values
   na_outcome        <- list(na_outcome)
@@ -175,7 +191,12 @@ ds_pheno_singlefit <- function(
       colnames(experiment$Design)[2], ':', colnames(experiment$Design)[3]
     )
     idx_inter <- which(rownames(summary(fit)$coefficients$cond)==term)
-    coeff_inter <- unlist(stats::coef(fit)$cond$Batch[1, idx_inter]) # effect
+    coeff_inter <- # effect
+      if (batch_aware) {
+        unlist(stats::coef(fit)$cond$Batch[1, idx_inter])
+      } else {
+        unlist(stats::coef(fit)$cond[[1]][1, idx_inter])
+      }
     pval_inter  <- summary(fit)$coefficients$cond[, 'Pr(>|z|)'][idx_inter] # p-value
     pval_inter[is.na(pval_inter)] <- 1.
     
@@ -199,13 +220,14 @@ fit_ds_pheno_model <- function(
     samples,             # sample names
     annotation,          # sample-level annotation
     predictor,           # biological predictor to be modelled
-    confounder = NULL,   # biological confounder to be modelled
-    famstr     = FALSE,  # whether annotation$FamilyID should be used to account
+    confounder  = NULL,  # biological confounder to be modelled
+    famstr      = FALSE, # whether annotation$FamilyID should be used to account
     # for siblings using fixed intercepts
     interaction = FALSE, # whether to also test potential interaction between
     # predictor and biological confounder
-    parallel   = FALSE,  # whether to use multi-threading
-    verbose    = TRUE    # whether to show progress
+    batch_aware = TRUE,  # whether to model batches
+    parallel    = FALSE, # whether to use multi-threading
+    verbose     = TRUE   # whether to show progress
 ) {
   
   ## Resolve specification of biological confounders
@@ -232,9 +254,9 @@ fit_ds_pheno_model <- function(
     fixed_effects  = c(predictor, confounder, extra_covar),
     random_effects =
       if (famstr) {
-        c('Batch', 'FamilyID')
+        if (batch_aware) { c('Batch', 'FamilyID') } else { 'FamilyID' }
       } else {
-        'Batch'
+        if (batch_aware) { 'Batch' } else { NULL }
       }, # (batch and maybe family ID modelled via random intercepts)
     force_ls = TRUE,
     interactions = interaction
@@ -290,8 +312,8 @@ fit_ds_pheno_model <- function(
       .packages     = c('glmmTMB', 'scales') # required packages
     ) %dopar% {
       ds_pheno_singlefit(
-        comps, idx_comp, phenopos, weights, experiment, interaction,
-        batches, nbatches, wconf
+        comps, idx_comp, phenopos, weights, experiment, batch_aware,
+        interaction, batches, nbatches, wconf
       )
     }
     if (verbose) {
@@ -343,7 +365,7 @@ fit_ds_pheno_model <- function(
         }
         ds_pheno_singlefit(
           comps, idx_comp, phenopos, weights, experiment, interaction,
-          batches, nbatches, wconf
+          batch_aware, batches, nbatches, wconf
         )
       }
     )

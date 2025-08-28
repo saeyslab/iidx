@@ -57,6 +57,7 @@ res_fsom_da <- test_da(
   annotation   = annotation,
   predictors   = predictors,  # potential drivers of DE
   confounders  = confounders, # effects to disentangle from predictors
+  interactions = FALSE,
   verbose      = TRUE
 )
 saveRDS(res_fsom_da, fname_fsom_da)
@@ -68,6 +69,7 @@ res_fsom_ds_mfi <- test_ds(
   counts      = inputs$counts,
   predictors  = predictors,    # potential drivers of DE
   confounders = confounders,   # effects to disentangle from predictors
+  interactions = FALSE,
   state_markers =
     as.vector(channels)[idcs_channels_state],
   parallel    = run_parallel,  # (multi-threading gives a big speed-up here)

@@ -29,7 +29,8 @@ ds_mfi_singlefit <- function(
     mfi,              # sample-wise MFI values per compartment
     weights,          # weights per sample
     experiment,       # experiment design from `prep_experiment`
-    interaction,
+    batch_aware,      # are batches being modelled?
+    interaction,      # are interactions being modelled?
     batches,          # batch per sample
     nbatches,         # number of unique batches
     wconf             # whether confounder is specified
@@ -69,45 +70,54 @@ ds_mfi_singlefit <- function(
     })
   })
   
-  ## Estimate 95% confidence intervals for batch random intercepts (predictor)
-  fi <-
-    lme4::fixef(fit)['(Intercept)'] # fixed intercept
-  re <-
-    as.data.frame(lme4::ranef(fit)) # all random-intercept errors
-  re <- re[re$grpvar=='Batch', ] # batch-intercept errors
-  z_crit <-
-    stats::qnorm(.975) # critical value for CI (for two-tailed Gaussian)
-  intercepts <-
-    stats::coef(fit)$Batch[, '(Intercept)'] # batch intercepts
-  re$ci_min <-
-    intercepts-z_crit*re$condsd # CI lower bounds
-  re$ci_max <-
-    intercepts+z_crit*re$condsd # CI upper bounds
-  
-  ## Calculate goodness-of-fit estimate per batch
-  sr <-
-    residuals(fit)**2 # squared residuals
-  tot <-
-    (d$y-mean(d$y, na.rm = TRUE))**2 # total squares
-  rss <-
-    sum(sr, na.rm = TRUE) # residual sum of squares (RSS)
-  tss <-
-    sum(tot, na.rm = TRUE) # total sum of squares (TSS)
-  rss_batch <-
-    sapply(batches, function(b) sum(sr[d$Batch==b], na.rm = TRUE)) # batch RSS
-  names(rss_batch) <- batches
-  tss_batch        <-
-    sapply(batches, function(b) sum(tot[d$Batch==b], na.rm = TRUE)) # batch TSS
-  names(tss_batch) <- batches
-  rsq <-
-    1-rss/tss # overall R^2
-  rsq_batch <- 
-    sapply(batches, function(b) 1-rss_batch[[b]]/tss_batch[[b]]) # batch R^2
-  names(rsq_batch) <- batches
+  rsq <- NA
+  if (batch_aware) {
+    
+    ## Estimate 95% confidence intervals for batch random intercepts (predictor)
+    fi <-
+      lme4::fixef(fit)['(Intercept)'] # fixed intercept
+    re <-
+      as.data.frame(lme4::ranef(fit)) # all random-intercept errors
+    re <- re[re$grpvar=='Batch', ] # batch-intercept errors
+    z_crit <-
+      stats::qnorm(.975) # critical value for CI (for two-tailed Gaussian)
+    intercepts <-
+      stats::coef(fit)$Batch[, '(Intercept)'] # batch intercepts
+    re$ci_min <-
+      intercepts-z_crit*re$condsd # CI lower bounds
+    re$ci_max <-
+      intercepts+z_crit*re$condsd # CI upper bounds
+    
+    ## Calculate goodness-of-fit estimate per batch
+    sr <-
+      residuals(fit)**2 # squared residuals
+    tot <-
+      (d$y-mean(d$y, na.rm = TRUE))**2 # total squares
+    rss <-
+      sum(sr, na.rm = TRUE) # residual sum of squares (RSS)
+    tss <-
+      sum(tot, na.rm = TRUE) # total sum of squares (TSS)
+    rss_batch <-
+      sapply(batches, function(b) sum(sr[d$Batch==b], na.rm = TRUE)) # batch RSS
+    names(rss_batch) <- batches
+    tss_batch        <-
+      sapply(batches, function(b) sum(tot[d$Batch==b], na.rm = TRUE)) # batch TSS
+    names(tss_batch) <- batches
+    rsq <-
+      1-rss/tss # overall R^2
+    rsq_batch <- 
+      sapply(batches, function(b) 1-rss_batch[[b]]/tss_batch[[b]]) # batch R^2
+    names(rsq_batch) <- batches
+  }
   
   ## Extract fitted parameters for predictor
   pval  <- summary(fit)$coefficients[, 'Pr(>|t|)'][-1] # p-value
-  coeff <- unlist(stats::coef(fit)$Batch[1, -1]) # effect
+  coeff <- # effect
+    if (batch_aware) {
+      unlist(stats::coef(fit)$Batch[1, -1])
+    } else {
+      stats::coef(fit)[[1]][1, -1]
+    }
   
   ## Gather fitted parameters
   res <- data.frame(
@@ -133,23 +143,27 @@ ds_mfi_singlefit <- function(
   }
   rownames(res) <- NULL
   
-  ## Gather random intercept parameters per batch
-  random_intercepts <- data.frame(
-    'Compartment'           = rep(comp, times = nbatches),
-    'Batch'                 = batches,
-    'Intercept'             = intercepts,
-    'ConfidenceIntervalMin' = re$ci_min,
-    'ConfidenceIntervalMax' = re$ci_max
-  )
-  rownames(random_intercepts) <- NULL
-  
-  ## Gather goodness-of-fit estimates per batch
-  batch_rsq <- data.frame(
-    'Compartment' = rep(comp, times = nbatches),
-    'Batch'       = batches,
-    'Rsq'         = rsq_batch
-  )
-  rownames(batch_rsq) <- NULL
+  random_intercepts <- batch_rsq <- NA
+  if (batch_aware) {
+    
+    ## Gather random intercept parameters per batch
+    random_intercepts <- data.frame(
+      'Compartment'           = rep(comp, times = nbatches),
+      'Batch'                 = batches,
+      'Intercept'             = intercepts,
+      'ConfidenceIntervalMin' = re$ci_min,
+      'ConfidenceIntervalMax' = re$ci_max
+    )
+    rownames(random_intercepts) <- NULL
+    
+    ## Gather goodness-of-fit estimates per batch
+    batch_rsq <- data.frame(
+      'Compartment' = rep(comp, times = nbatches),
+      'Batch'       = batches,
+      'Rsq'         = rsq_batch
+    )
+    rownames(batch_rsq) <- NULL
+  }
   
   ## Gather names of sampled excluded due to missing outcome values
   na_outcome        <- list(na_outcome)
@@ -162,8 +176,13 @@ ds_mfi_singlefit <- function(
       colnames(experiment$Design)[2], ':', colnames(experiment$Design)[3]
     )
     idx_inter <- which(rownames(summary(fit)$coefficients)==term)
-    pval_inter  <- summary(fit)$coefficients[, 'Pr(>|t|)'][idx_inter]
-    coeff_inter <- unlist(stats::coef(fit)$Batch[1, idx_inter])
+    pval_inter <- summary(fit)$coefficients[, 'Pr(>|t|)'][idx_inter]
+    coeff_inter <- # effect
+      if (batch_aware) {
+        unlist(stats::coef(fit)$Batch[1, idx_inter])
+      } else {
+        unlist(stats::coef(fit)[[1]][1, idx_inter])
+      }
     res['PValueInteraction'] <- pval_inter
     res['logFCInteraction']  <- sign(coeff_inter)*log2(1+abs(coeff_inter))
     res['changeInteraction'] <- coeff_inter
@@ -191,6 +210,7 @@ fit_ds_mfi_model <- function(
     # for siblings using fixed intercepts
     interaction = FALSE, # whether to also test potential interaction between
     # predictor and biological confounder
+    batch_aware = TRUE,  # whether to model batches
     parallel    = FALSE, # whether to use multi-threading
     verbose     = TRUE   # whether to show progress
 ) {
@@ -219,9 +239,9 @@ fit_ds_mfi_model <- function(
     fixed_effects = c(predictor, confounder, extra_covar),
     random_effects =
       if (famstr) {
-        c('Batch', 'FamilyID')
+        if (batch_aware) { c('Batch', 'FamilyID') } else { 'FamilyID' }
       } else {
-        'Batch'
+        if (batch_aware) { c('Batch') } else { NULL }
       }, # (batch and maybe family ID modelled via random intercepts)
     force_ls = TRUE,
     interactions = interaction
@@ -277,8 +297,8 @@ fit_ds_mfi_model <- function(
       .packages     = c('lme4', 'lmerTest')  # required packages
     ) %dopar% {
       ds_mfi_singlefit(
-        comps, idx_comp, mfi, weights, experiment, interaction, batches,
-        nbatches, wconf
+        comps, idx_comp, mfi, weights, experiment, batch_aware, interaction,
+        batches, nbatches, wconf
       )
     }
     if (verbose) {
@@ -329,8 +349,8 @@ fit_ds_mfi_model <- function(
           utils::setTxtProgressBar(pb, idx_comp)
         }
         ds_mfi_singlefit(
-          comps, idx_comp, mfi, weights, experiment, interaction, batches,
-          nbatches, wconf
+          comps, idx_comp, mfi, weights, experiment, batch_aware, interaction,
+          batches, nbatches, wconf
         )
       }
     )
