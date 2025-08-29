@@ -71,6 +71,7 @@ ds_mfi_singlefit <- function(
   })
   
   rsq <- NA
+  re <- NA
   if (batch_aware) {
     
     ## Estimate 95% confidence intervals for batch random intercepts (predictor)
@@ -116,7 +117,7 @@ ds_mfi_singlefit <- function(
     if (batch_aware) {
       unlist(stats::coef(fit)$Batch[1, -1])
     } else {
-      stats::coef(fit)[[1]][1, -1]
+      unlist(stats::coef(fit)[[1]][1, -1])
     }
   
   ## Gather fitted parameters
