@@ -179,8 +179,6 @@ test_da <- function(
   }
   close(pb)
   
-  res_batch_conf0 <- na_annotation_batch_conf0 <-
-    res_batch_conf1 <- na_annotation_batch_conf1 <- NA
   if (batch_aware) {
     
     ## Fit batch-wise models (input limited to samples in one batch)
@@ -292,6 +290,9 @@ test_da <- function(
       }
     }
     close(pb) 
+  } else {
+    res_batch_conf0 <- na_annotation_batch_conf0 <-
+      res_batch_conf1 <- na_annotation_batch_conf1 <- NA
   }
   
   ## Determine which predictors are continuous
