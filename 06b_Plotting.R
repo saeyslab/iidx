@@ -134,17 +134,7 @@ plot_volcano <- function(
   }
   
   ## Resolve description of batch modelling
-  if (
-    grepl('Differential State', type)
-  ) { # modelling based on limma/Beta-GLMMs
-    desc <- paste0(
-      desc, '\nBatch modelled via random intercepts'
-    )
-  } else { # modelling based on edgeR
-    desc <- paste0(
-      desc, '\nBatch modelled via additional fixed effects'
-    )
-  }
+  desc <- paste0(desc, '\nBatch modelled via random intercepts')
   
   ## Resolve size of points for significant results
   idcs_signif <- input$AdjPVal<=alpha_p
@@ -866,262 +856,259 @@ plot_batch_stats <- function(
   
   ## Extract fitted model parameters
   if (type=='Differential Abundance') {
-    
+
+    ## Axis labels for DA batch-intercept and goodness-of-fit plots
+    lab_yaxis_ri  <- paste0(comp, ' (% of cells)\n(batch intercept)')
+    lab_yaxis_rsq <- 'batch-level R<sup>2</sup> estimate'
+
     if (wconf) { # confounder specified
-      
-      ## Extract joint-model and batch-wise model stats
-      x_joint <- res$confounders_joint[[predictor]][[confounder]]
-      x_batch <- lapply(
-        res$confounders_batch,
-        function(x) x[[predictor]][[confounder]]
+
+      ## Extract predictor and confounder effects from joint model
+      x_joint    <- res$confounders_joint[[predictor]][[confounder]]
+      idx_comp   <- x_joint$Compartment==comp
+      ch_pred    <- x_joint$logFC[idx_comp]
+      ch_conf    <- x_joint$logFCConfounder[idx_comp]
+      p_pred     <- x_joint$AdjPVal[idx_comp]
+      p_conf     <- x_joint$AdjPValConfounder[idx_comp]
+
+      ## Extract batch random intercepts with confidence intervals
+      x_ri       <- res$confounders_random_intercepts[[predictor]][[confounder]]
+      ri_avg     <- x_ri$Intercept[x_ri$Compartment==comp]
+      ri_min     <- x_ri$ConfidenceIntervalMin[x_ri$Compartment==comp]
+      ri_max     <- x_ri$ConfidenceIntervalMax[x_ri$Compartment==comp]
+      batches    <- x_ri$Batch[x_ri$Compartment==comp]
+
+      ## Normalise intercepts to % of cells: divide by sum across metaclusters
+      ##   per batch (preserves asymmetry of exp-transformed CI bounds)
+      batch_totals <- tapply(x_ri$Intercept, x_ri$Batch, sum)
+      ri_scaler    <- as.numeric(batch_totals[as.character(batches)])
+      d_ri <- data.frame(
+        'Label' = factor(batches, levels = batches),
+        'Batch' = factor(batches, levels = batches),
+        'RI'    = ri_avg/ri_scaler*100,
+        'CIMin' = ri_min/ri_scaler*100,
+        'CIMax' = ri_max/ri_scaler*100
       )
-      
-      ## Create mask for selected compartment
-      idx_comp <- x_joint$Compartment==comp
-      
-      ## Get predictor coefficient & p-val in joint model
-      fc_joint <- x_joint$FC[idx_comp]
-      ch_joint <- sign(fc_joint)*(abs(fc_joint)-1.)
-      p_joint  <- x_joint$AdjPVal[idx_comp] 
-      s_joint  <- sig_asterisks(p_joint)
-      
-      ## Get predictor coefficients & p-vals in batch models
-      fc_batch <- sapply(x_batch, function(x) x$FC[idx_comp])
-      ch_batch <- sapply(fc_batch, function(x) sign(x)*(abs(x)-1.))
-      p_batch  <- sapply(x_batch, function(x) x$AdjPVal[idx_comp])
-      s_batch  <- sig_asterisks(p_batch)
-      
-      ## Get confounder coefficient & p-val in joint model
-      c_fc_joint <- x_joint$FCConfounder[idx_comp]
-      c_ch_joint <- sign(c_fc_joint)*(abs(c_fc_joint)-1.)
-      c_p_joint  <- x_joint$AdjPValConfounder[idx_comp] 
-      c_s_joint  <- sig_asterisks(c_p_joint)
-      
-      ## Get confounder coefficients & p-vals in batch models
-      c_fc_batch <- sapply(x_batch, function(x) x$FCConfounder[idx_comp])
-      c_ch_batch <- sapply(c_fc_batch, function(x) sign(x)*(abs(x)-1.))
-      c_p_batch  <- sapply(x_batch, function(x) x$AdjPValConfounder[idx_comp])
-      c_s_batch  <- sig_asterisks(c_p_batch)
-      
-      ## Determine positions of labels in the plot
-      bp        <- c(ch_batch, ch_joint)
-      lp        <- bp+sign(bp)*diff(range(bp))/30
-      lp[lp>=0] <- lp[lp>=0]-diff(range(bp))/50
-      lp[lp<0]  <- lp[lp<0]-diff(range(bp))/20
-      c_bp      <- c(c_ch_batch, c_ch_joint)
-      c_lp      <- c_bp-diff(range(c_bp))/20+sign(c_bp)*diff(range(c_bp))/30
-      
-      ## Gather predictor stats in a data frame
-      pred_title <- paste0('Predictor: ', predictor)
-      d_pred <- data.frame(
-        'Batch'         = as.factor(
-          sub('Batch', '', c(names(ch_batch), 'ALL'))
-        ),
-        'LogFC'         = c(fc_batch, fc_joint),
-        'Change'        = c(ch_batch, ch_joint),
-        'AdjPVal'       = c(p_batch, p_joint),
-        'Significance'  = c(s_batch, s_joint),
-        'LabelPosition' = lp,
-        'IsJoint'       = c(rep(FALSE, times = length(ch_batch)), TRUE),
-        'Effect'        = pred_title
+
+      ## Extract overall and batch-wise R^2
+      x_rsq  <- x_joint[, c('Compartment', 'Rsq')]
+      d_rsq  <- data.frame(
+        'Batch' = as.factor('Joint'),
+        'Rsq'   = x_rsq$Rsq[x_rsq$Compartment==comp]
       )
-      
-      ## Gather confounder stats in a data frame
-      conf_title <- paste0('Confounder: ', confounder)
-      d_conf <- data.frame(
-        'Batch'         = as.factor(
-          sub('Batch', '', c(names(c_ch_batch), 'ALL'))
-        ),
-        'LogFC'         = c(c_fc_batch, c_fc_joint),
-        'Change'        = c(c_ch_batch, c_ch_joint),
-        'AdjPVal'       = c(c_p_batch, c_p_joint),
-        'Significance'  = c(c_s_batch, c_s_joint),
-        'LabelPosition' = c_lp,
-        'IsJoint'       = c(rep(FALSE, times = length(c_ch_batch)), TRUE),
-        'Effect'        = conf_title
+      x_brsq <- res$confounders_batch_r_squared[[predictor]][[confounder]]
+      d_brsq <- data.frame(
+        'Label'    = factor(batches, levels = batches),
+        'Batch'    = factor(batches, levels = batches),
+        'BatchRsq' = x_brsq$Rsq[x_brsq$Compartment==comp]
       )
-      
-      ## Make sure batch flags remain ordered in the plot
-      b  <- unique(d_pred$Batch)
-      bn <- as.integer(gsub('ALL', '999', gsub('Batch', '', b)))
-      for (bl in b[order(bn, decreasing = TRUE)]) {
-        
-        d_pred$Batch <- relevel(d_pred$Batch, ref = bl)
-        d_conf$Batch <- relevel(d_conf$Batch, ref = bl)
-      }
-      
-      ## Combine predictor and confounder data frame
-      d <- rbind(d_pred, d_conf)
-      
-      ## Make sure predictor comes before confounder in the plot
-      d$Effect <- as.factor(d$Effect)
-      d$Effect <- relevel(d$Effect, ref = pred_title)
-      
-      ## Generate plot of effect size and significance by batch
-      p <-
-        ggplot2::ggplot(
-          data = d,
-          mapping = ggplot2::aes(
-            x    = .data$Batch,
-            y    = .data$Change,
-            col  = .data$Batch,
-            fill = .data$IsJoint
-          )
-        ) +
-        ggplot2::facet_wrap(
-          ~.data$Effect,
-          nrow   = 2,
-          scales = 'free_y'
-        ) +
-        ggplot2::xlab(
-          ''
-        ) +
-        ggplot2::ylab(
-          'Slope coefficient'
-        ) +
-        ggplot2::geom_bar( # bars for effect sizes
-          stat       = 'identity',
-          width      = .6,
-          linewidth  = .5
-        ) +
-        ggplot2::geom_hline( # zero-effect line
-          yintercept = 0.,
-          size       = .5
-        ) +
-        ggplot2::theme_minimal(
-        ) +
-        ggplot2::geom_text( # asterisk labels per significance
-          size     = 7,
-          fontface = 'bold',
-          vjust    = .5,
-          mapping = ggplot2::aes(
-            x     = .data$Batch,
-            y     = .data$LabelPosition,
-            label = .data$Significance
-          )
-        ) +
-        ggplot2::scale_fill_manual(
-          values = c('white', 'lightgrey')
-        ) +
-        ggplot2::theme(
-          legend.position = 'none',
-          axis.text.x     = ggplot2::element_text(
-            angle = 0,vjust = 0., hjust = .5, size = 10
-          ),
-          axis.text.y     = ggplot2::element_text(size = 10),
-          plot.title      = ggplot2::element_text(size = 12),
-          strip.text      = ggplot2::element_text(size = 10)
-        ) +
-        ggplot2::ggtitle(
-          'edgeR model coefficients by batch and jointly'
-        )
+
     } else { # no confounder specified
-      
-      ## Extract joint-model and batch-wise model stats
-      x_joint <- res$joint[[predictor]]
-      x_batch <- lapply(
-        res$batch,
-        function(x) x[[predictor]]
+
+      ## Extract predictor effect from joint model
+      x_joint    <- res$joint[[predictor]]
+      idx_comp   <- x_joint$Compartment==comp
+      ch_pred    <- x_joint$logFC[idx_comp]
+      ch_conf    <- NA
+      p_pred     <- x_joint$AdjPVal[idx_comp]
+      p_conf     <- NA
+
+      ## Extract batch random intercepts with confidence intervals
+      x_ri       <- res$random_intercepts[[predictor]]
+      ri_avg     <- x_ri$Intercept[x_ri$Compartment==comp]
+      ri_min     <- x_ri$ConfidenceIntervalMin[x_ri$Compartment==comp]
+      ri_max     <- x_ri$ConfidenceIntervalMax[x_ri$Compartment==comp]
+      batches    <- x_ri$Batch[x_ri$Compartment==comp]
+
+      ## Normalise intercepts to % of cells: divide by sum across metaclusters
+      ##   per batch (preserves asymmetry of exp-transformed CI bounds)
+      batch_totals <- tapply(x_ri$Intercept, x_ri$Batch, sum)
+      ri_scaler    <- as.numeric(batch_totals[as.character(batches)])
+      d_ri <- data.frame(
+        'Label' = factor(batches, levels = batches),
+        'Batch' = factor(batches, levels = batches),
+        'RI'    = ri_avg/ri_scaler*100,
+        'CIMin' = ri_min/ri_scaler*100,
+        'CIMax' = ri_max/ri_scaler*100
       )
-      
-      ## Create mask for selected compartment
-      idx_comp <- x_joint$Compartment==comp
-      
-      ## Get predictor coefficient & p-val in joint model
-      fc_joint <- x_joint$FC[idx_comp]
-      ch_joint <- sign(fc_joint)*(abs(fc_joint)-1.)
-      p_joint  <- x_joint$AdjPVal[idx_comp] 
-      s_joint  <- sig_asterisks(p_joint)
-      
-      ## Get predictor coefficients & p-vals in batch models
-      fc_batch <- sapply(x_batch, function(x) x$FC[idx_comp])
-      ch_batch <- sapply(fc_batch, function(x) sign(x)*(abs(x)-1.))
-      p_batch  <- sapply(x_batch, function(x) x$AdjPVal[idx_comp])
-      s_batch  <- sig_asterisks(p_batch)
-      
-      ## Determine positions of labels in the plot
-      bp        <- c(ch_batch, ch_joint)
-      lp        <- bp+sign(bp)*diff(range(bp))/30
-      lp[lp>=0] <- lp[lp>=0]-diff(range(bp))/50
-      lp[lp<0]  <- lp[lp<0]-diff(range(bp))/20
-      
-      ## Gather predictor stats in a data frame
-      pred_title <- paste0('Predictor: ', predictor)
-      d <- data.frame(
-        'Batch'         = as.factor(c(paste0(names(ch_batch)), 'ALL')),
-        'LogFC'         = c(fc_batch, fc_joint),
-        'Change'        = c(ch_batch, ch_joint),
-        'AdjPVal'       = c(p_batch, p_joint),
-        'Significance'  = c(s_batch, s_joint),
-        'LabelPosition' = lp,
-        'IsJoint'       = c(rep(FALSE, times = length(ch_batch)), TRUE),
-        'Effect'        = as.factor(pred_title)
+
+      ## Extract overall and batch-wise R^2
+      x_rsq  <- x_joint[, c('Compartment', 'Rsq')]
+      d_rsq  <- data.frame(
+        'Batch' = as.factor('Joint'),
+        'Rsq'   = x_rsq$Rsq[x_rsq$Compartment==comp]
       )
-      
-      ## Make sure batch flags remain ordered in the plot
-      b <- unique(d$Batch)
-      bn <- as.integer(gsub('ALL', '999', gsub('Batch', '', b)))
-      for (bl in b[order(bn, decreasing = TRUE)]) {
-        d$Batch <- relevel(d$Batch, ref = bl)
-      }
-      
-      ## Generate plot of effect size and significance by batch
-      p <-
-        ggplot2::ggplot(
-          data = d,
-          mapping = ggplot2::aes(
-            x    = .data$Batch,
-            y    = .data$Change,
-            col  = .data$Batch,
-            fill = .data$IsJoint
-          )
-        ) +
-        ggplot2::facet_wrap(
-          ~.data$Effect
-        ) +
-        ggplot2::xlab(
-          ''
-        ) +
-        ggplot2::ylab(
-          'Change per unit increment'
-        ) +
-        ggplot2::geom_bar( # bars for effect sizes
-          stat       = 'identity',
-          width      = .6,
-          linewidth  = .5
-        ) +
-        ggplot2::geom_hline(
-          yintercept = 0.,
-          size       = .5
-        ) +
-        ggplot2::theme_minimal(
-        ) +
-        ggplot2::geom_text( # asterisk labels per significance
-          size     = 7,
-          fontface = 'bold',
-          vjust    = .5,
-          mapping = ggplot2::aes(
-            x     = .data$Batch,
-            y     = .data$LabelPosition,
-            label = .data$Significance
-          )
-        ) +
-        ggplot2::scale_fill_manual(
-          values = c('white', 'lightgrey')
-        ) +
-        ggplot2::theme(
-          legend.position = 'none',
-          axis.text.x     = ggplot2::element_text(
-            angle = 0, vjust = 0., hjust = .5, size = 10
-          ),
-          axis.text.y     = ggplot2::element_text(size = 10),
-          plot.title      = ggplot2::element_text(size = 12),
-          strip.text      = ggplot2::element_text(size = 10)) +
-        ggplot2::ggtitle(
-          'edgeR model coefficients by batch and jointly'
-        )
+      x_brsq <- res$batch_r_squared[[predictor]]
+      d_brsq <- data.frame(
+        'Label'    = factor(batches, levels = batches),
+        'Batch'    = factor(batches, levels = batches),
+        'BatchRsq' = x_brsq$Rsq[x_brsq$Compartment==comp]
+      )
     }
-    
+
+    ## Generate plot of batch random intercepts with 95% CI
+    p_ri <-
+      ggplot2::ggplot(
+        data    = d_ri,
+        mapping = ggplot2::aes(
+          x   = .data$Label,
+          col = .data$Batch
+        )
+      ) +
+      ggplot2::xlab('Batch') +
+      ggplot2::ylab(lab_yaxis_ri) +
+      ggplot2::geom_point(
+        mapping = ggplot2::aes(y = .data$RI)
+      ) +
+      ggplot2::geom_linerange(
+        mapping = ggplot2::aes(
+          ymin = .data$CIMin,
+          ymax = .data$CIMax
+        )
+      ) +
+      ggplot2::theme_minimal() +
+      ggplot2::theme(
+        legend.position = 'none',
+        axis.text.x     = ggplot2::element_text(
+          angle = 0, vjust = 0.5, hjust = .5, size = 10
+        ),
+        axis.title.y    = ggplot2::element_text(size = 10)
+      ) +
+      ggplot2::ggtitle('Batch-level intercepts')
+
+    ## Generate plot of batch-wise R^2 goodness-of-fit
+    p_brsq <-
+      ggplot2::ggplot(
+        data    = d_brsq,
+        mapping = ggplot2::aes(
+          x   = .data$Label,
+          y   = .data$BatchRsq,
+          col = .data$Batch
+        )
+      ) +
+      ggplot2::geom_hline( # overall R^2 reference line
+        yintercept = d_rsq$Rsq,
+        lwd        = 0.6,
+        linetype   = 2,
+        col        = 'darkgrey'
+      ) +
+      ggplot2::geom_hline( # R^2 = 0 reference line
+        yintercept = 0,
+        lwd        = 0.6,
+        linetype   = 1,
+        col        = '#2b2b2b'
+      ) +
+      ggplot2::geom_segment(
+        mapping = ggplot2::aes(
+          x    = .data$Label,
+          xend = .data$Label,
+          y    = 0.,
+          yend = .data$BatchRsq
+        )
+      ) +
+      ggplot2::geom_point(
+        mapping = ggplot2::aes(y = .data$BatchRsq)
+      ) +
+      ggplot2::xlab('Batch') +
+      ggplot2::ylab(lab_yaxis_rsq) +
+      ggplot2::theme_minimal() +
+      ggplot2::theme(
+        legend.position = 'none',
+        axis.text.x     = ggplot2::element_text(
+          angle = 0, vjust = 0.5, hjust = .5, size = 10
+        ),
+        axis.title.y    = ggtext::element_markdown(size = 10)
+      ) +
+      ggplot2::ggtitle('Batch-level goodness-of-fit')
+
+    ## Resolve predictor and confounder labels for effects panel
+    if (cont) {
+      pred_title <- predictor
+    } else {
+      pred_title <- paste0(
+        predictor, ' (', levels(as.factor(annotation[, predictor]))[2], ')'
+      )
+    }
+
+    ## Collect predictor (and optional confounder) effect stats
+    effects_vals <- c(ch_pred, if (wconf) ch_conf)
+    effects_p    <- c(p_pred, if (wconf) p_conf)
+    effects_labs <- pred_title
+    if (wconf) {
+      if (conf_cont) {
+        conf_title <- confounder
+      } else {
+        conf_title <- paste0(
+          confounder, ' (', levels(as.factor(annotation[, confounder]))[2], ')'
+        )
+      }
+      effects_labs <- c(effects_labs, conf_title)
+    }
+
+    d_eff <- data.frame(
+      'Effect'    = as.factor(effects_labs),
+      'LabelType' = as.factor(c(
+        rep('adjusted <i>p</i>-value', times = length(effects_labs)),
+        rep('effect direction',        times = length(effects_labs))
+      )),
+      'Label'     = c(
+        sig_level(effects_p, prefix = FALSE),
+        ifelse(effects_vals>0, '↑', '↓')
+      ),
+      'Asterisks' = sig_asterisks(effects_p),
+      'Signif'    = effects_p<.05
+    )
+
+    ## Generate effects panel (p-values and directions)
+    p_eff <-
+      ggplot2::ggplot(
+        data    = d_eff,
+        mapping = ggplot2::aes(
+          x   = .data$Effect,
+          y   = .data$LabelType,
+          col = .data$Signif
+        )
+      ) +
+      ggplot2::scale_size_manual(values = c(5, 7.5)) +
+      ggplot2::scale_x_discrete(position = 'top') +
+      ggplot2::geom_text(
+        mapping = ggplot2::aes(
+          y     = .data$LabelType,
+          x     = .data$Effect,
+          label = .data$Label,
+          size  = .data$LabelType
+        ),
+        color = dplyr::if_else(d_eff$Signif, 'black', '#858585')
+      ) +
+      ggplot2::geom_vline(xintercept = 1.5, color = 'darkgrey') +
+      ggplot2::geom_hline(yintercept = 1.5, color = 'darkgrey') +
+      ggplot2::theme_minimal() +
+      ggplot2::ggtitle('Effects') +
+      ggplot2::theme(
+        panel.background = ggplot2::element_rect('#f5f5f5', 'white', 5),
+        legend.position  = 'none',
+        panel.grid.major = ggplot2::element_blank(),
+        panel.grid.minor = ggplot2::element_blank(),
+        panel.spacing    = ggplot2::unit(0, 'cm'),
+        axis.ticks       = ggplot2::element_blank(),
+        axis.text.y      = ggtext::element_markdown(
+          size = 10, colour = 'black', angle = 90, hjust = .5
+        ),
+        axis.text.x      = ggtext::element_markdown(
+          size = 10, colour = 'black'
+        ),
+        axis.title.x     = ggplot2::element_blank(),
+        axis.title.y     = ggplot2::element_blank()
+      )
+
+    ## Combine intercept, goodness-of-fit, and effects panels
+    p <- cowplot::plot_grid(
+      cowplot::plot_grid(p_ri, p_brsq, nrow = 2),
+      p_eff,
+      ncol       = 2,
+      rel_widths = c(length(batches)/2, 3)
+    )
+
   } else { # DS-MFI or DS-Pheno results
     
     ## Resolve outcome and axis labels

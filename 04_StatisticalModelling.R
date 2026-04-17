@@ -57,10 +57,15 @@ res_fsom_da <- test_da(
   annotation   = annotation,
   predictors   = predictors,  # potential drivers of DE
   confounders  = confounders, # effects to disentangle from predictors
-  interactions = FALSE,
+  interactions = TRUE,
+  # interactions = FALSE,
+  batch_aware = FALSE,
+  # batch_aware = TRUE,
   verbose      = TRUE
 )
-saveRDS(res_fsom_da, fname_fsom_da)
+dir.create('Results_04_StatisticalModelling_Interactions')
+saveRDS(res_fsom_da, sub('Modelling', 'Modelling_Interactions', fname_fsom_da))
+# saveRDS(res_fsom_da, fname_fsom_da)
 
 message('(2/', n_out, ') Differential State (MFI) tests')
 res_fsom_ds_mfi <- test_ds(
@@ -69,13 +74,17 @@ res_fsom_ds_mfi <- test_ds(
   counts      = inputs$counts,
   predictors  = predictors,    # potential drivers of DE
   confounders = confounders,   # effects to disentangle from predictors
-  interactions = FALSE,
+  interactions = TRUE,
+  # interactions = FALSE,
+  batch_aware = FALSE,
+  # batch_aware = TRUE,
   state_markers =
     as.vector(channels)[idcs_channels_state],
   parallel    = run_parallel,  # (multi-threading gives a big speed-up here)
   verbose     = TRUE
 )
-saveRDS(res_fsom_ds_mfi, fname_fsom_ds_mfi)
+saveRDS(res_fsom_ds_mfi, sub('Modelling', 'Modelling_Interactions', fname_fsom_ds_mfi))
+# saveRDS(res_fsom_ds_mfi, fname_fsom_ds_mfi)
 
 res_fsom_ds_pheno <- NULL
 if (n_out==3) {
@@ -86,13 +95,18 @@ if (n_out==3) {
     counts      = inputs$counts,
     predictors  = predictors,   # potential drivers of DE
     confounders = confounders,  # effects to disentangle from predictors
+    interactions = TRUE,
+    # interactions = FALSE,
+    batch_aware = FALSE,
+    # batch_aware = TRUE,
     state_markers =
       as.vector(channels)[idcs_channels_state],
     parallel    = run_parallel, # (multi-threading gives a big speed-up here)
     verbose     = TRUE
   )
 }
-saveRDS(res_fsom_ds_pheno, fname_fsom_ds_pheno)
+saveRDS(res_fsom_ds_pheno, sub('Modelling', 'Modelling_Interactions', fname_fsom_ds_pheno))
+# saveRDS(res_fsom_ds_pheno, fname_fsom_ds_pheno)
 
 message(
   '## iidx: 04_StatisticalModelling.R FINISHED ',

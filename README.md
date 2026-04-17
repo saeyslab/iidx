@@ -1,19 +1,22 @@
 ## `iidx`: interactive & interpretable differential expression models
 
-**`iidx` is a fully documented workflow for interactive and interpretable differential expression (DE) modelling in cytometry.**
-Written in R, `iidx` extends state-of-the-art tools for pre-processing, feature extraction and statistical analysis of flow and mass cytometry data, and includes **a novel framework for post-hoc filtering, interpretation and export of results**.
+**`iidx` is a workflow for interactive and interpretable differential expression (DE) modelling in cytometry.**
+Written in R, it extends state-of-the-art tools for pre-processing, feature extraction and statistical analysis of flow and mass cytometry data.
+`iidx` includes **a novel framework for post-hoc filtering, interpretation and exporting of results**.
+
 It can be used as a reference and basis for other computational analyses of large cytometry datasets.
 
-We have validated our pipeline in two analyses of age- and sex-associated immunophenotype changes across 2196 donors, focusing on B-cell and T- & NK-cell flow data from peripheral blood, measured in 15 batches.
+We have validated our gold-standard pipeline in two analyses of age- and sex-associated immunophenotype changes across 2196 donors, focusing on B-cell and T- & NK-cell flow data from peripheral blood, measured in 15 batches.
+The comprehensive results of these analyses will be published soon.
 
 <img src="./overview.png" alt="overview" width="900"/>
 
 **Overview of the computational pipeline.** **1.** *FCS inputs and associated metadata are gathered.* **2.** *Data is pre-processed to obtain clean protein expression signal with minimal amount of batch effect.* **3.** *A clustering model is trained to partition data into subsets and extract salient features per subset, sample and marker.* **4.** *A battery of adapted parametric tests is used to model differential abundance and state of cell subsets based on sample-level biological predictors.*
 
 <details>
-<summary><b>Differential expression modelling background</b>: investigating changes in phenotype by condition 👩‍🔬</summary>
+<summary><b>Differential expression modelling</b>: investigating changes in phenotype by condition 👩‍🔬</summary>
 
-DE modelling is a standard approach to the exploration of multi-sample cohorts of cytometry and other single-cell data.
+DE modelling is a standard approach for exploring of multi-sample cohorts of cytometry and other single-cell data.
 The task is to **model phenotype changes in patient or donor samples in association with biological correlates**, such as age, sex, diagnosis or serostatus.
 Over the past decade, a number of semi-supervised computational approaches have emerged in this field as important drivers of biological discovery.
 
@@ -28,7 +31,7 @@ Some important tools include
 <hr>
 </details>
 <details>
-<summary><b>Outstanding challenges</b> that `iidx` addresses 🗝️</summary>
+<summary><b>Outstanding challenges</b> that we address 🗝️</summary>
 
 There are some challenges in DE modelling, pertaining both to **methodology and usability**, that complicate this type of analyses.
 We describe these challenges and how we tackle them below.
