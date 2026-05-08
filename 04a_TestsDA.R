@@ -175,7 +175,7 @@ da_singlefit <- function(
       if (is.na(p_inter)) { p_inter <- 1. }
 
       ## Extract log2FC for interaction term
-      coef_inter  <- glmmTMB::fixef(fit_inter)$cond[inter_term]
+      coef_inter  <- tail(glmmTMB::fixef(fit_inter)$cond, 1)
       logfc_inter <- coef_inter/log(2)
       fc_inter    <- sign(logfc_inter)*(2^abs(logfc_inter))
     }
