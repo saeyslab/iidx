@@ -148,7 +148,7 @@ da_singlefit <- function(
     if (is.na(p_conf)) { p_conf <- 1. }
 
     ## Extract log2FC for confounder
-    coef_conf  <- glmmTMB::fixef(fit_full)$cond[confounder]
+    coef_conf  <- tail(glmmTMB::fixef(fit_full)$cond, 1)
     logfc_conf <- coef_conf/log(2)
     fc_conf    <- sign(logfc_conf)*(2^abs(logfc_conf))
 
@@ -419,3 +419,4 @@ fit_da_model <- function(
     'na_annotation'     = na_annotation
   )
 }
+
