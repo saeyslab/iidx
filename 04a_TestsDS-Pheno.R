@@ -364,8 +364,8 @@ fit_ds_pheno_model <- function(
           utils::setTxtProgressBar(pb, idx_comp)
         }
         ds_pheno_singlefit(
-          comps, idx_comp, phenopos, weights, experiment, interaction,
-          batch_aware, batches, nbatches, wconf
+          comps, idx_comp, phenopos, weights, experiment, batch_aware,
+          interaction, batches, nbatches, wconf
         )
       }
     )
@@ -414,3 +414,4 @@ fit_ds_pheno_model <- function(
     # ^ samples excluded due to missing outcome values (per compartment)
   )
 }
+
