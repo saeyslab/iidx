@@ -21,7 +21,7 @@
 # hyperparameters. The function of each input parameter is explained in the
 # README.md file of the iidx repository.
 
-# Input parameter values for our B-cell analysis are specified here.
+# Input parameter values for our T- and NK-cell analysis are specified here.
 
 
 library(tidyverse)
@@ -35,41 +35,42 @@ annotation <- read.csv('Annotation.csv')
 batch_remove <- c(1, 2, 3, 4)
 
 channels <- c(
-  'FSC-A'  = 'FSC-A',    
-  'FSC-H'  = 'FSC-H',    
-  'SSC-A'  = 'SSC-A',    
-  'B515-A' = 'RSV Cav1', 
-  'B610-A' = 'CD141',    
-  'B660-A' = 'CD123',    
-  'B710-A' = 'CD16',     
-  'B780-A' = 'IgD',      
-  'G575-A' = 'CD32',     
-  'G610-A' = 'CD40',     
-  'G660-A' = 'CD85j',    
-  'G710-A' = 'CD11c',    
-  'G780-A' = 'CXCR3',    
-  'R670-A' = 'IgA',      
-  'R730-A' = 'CD27',     
-  'R780-A' = 'CD19',     
-  'U390-A' = 'CD1c',     
-  'U450-A' = 'Viability',
-  'U500-A' = 'CD21',     
-  'U570-A' = 'TACI',     
-  'U660-A' = 'HLA-DR',   
-  'U740-A' = 'IgG',      
-  'U785-A' = 'CD20',     
-  'V450-A' = 'IL-21R',   
-  'V510-A' = 'CD14',     
-  'V570-A' = 'IgM',      
-  'V605-A' = 'BAFF-R',   
-  'V655-A' = 'CD10',     
-  'V710-A' = 'CD23',     
-  'V750-A' = 'CXCR5',    
-  'V785-A' = 'CD64',     
-  'Time'   = 'Time'      
+  'FSC-A'  = 'FSC-A',             
+  'FSC-H'  = 'FSC-H',             
+  'SSC-A'  = 'SSC-A',             
+  'B515-A' = 'TCR Vd1',           
+  'B610-A' = 'CD57',              
+  'B660-A' = 'CD244',             
+  'B710-A' = 'CD127',             
+  'B780-A' = 'CXCR5',             
+  'V450-A' = 'CD122',             
+  'V510-A' = 'CD3',               
+  'V570-A' = 'CD8a',              
+  'V605-A' = 'CD158',             
+  'V655-A' = 'CD28',              
+  'V710-A' = 'TCR Va7_2',         
+  'V750-A' = 'CD38',              
+  'V785-A' = 'CD27',              
+  'U390-A' = 'CCR7',              
+  'U450-A' = 'Viability',         
+  'U500-A' = 'CD16',              
+  'U570-A' = 'CD56',              
+  'U660-A' = 'PD-1',              
+  'U740-A' = 'CD95',              
+  'U785-A' = 'CD4',               
+  'R670-A' = 'CD1d-PBS57 tetramer',
+  'R730-A' = 'CD45RA',            
+  'R780-A' = 'CCR5',              
+  'G575-A' = 'TCR Vg9',           
+  'G610-A' = 'TCR Vd2',           
+  'G660-A' = 'CD161',             
+  'G710-A' = 'HLA-DR',            
+  'G780-A' = 'CD314',             
+  'Time'   = 'Time'               
 )
-idcs_channels_lineage <- c(8, 14, 15, 16, 19, 21, 22, 23, 26, 28)
-idcs_channels_state <- c(9, 10, 11, 12, 13, 17, 20, 24, 27, 29, 30)
+idcs_channels_lineage <-
+  c(4, 10, 11, 13, 14, 16, 17, 19, 20, 22, 23, 24, 25, 27, 28, 29, 30)
+idcs_channels_state   <- c(5, 6, 7, 8, 9, 12, 15, 21, 26, 31)
 
 ## 00_Preprocessing.R ----
 
@@ -84,37 +85,44 @@ channels_rename <- c( # from - to
   'U670-A' = 'U660-A'
 )
 thresholds <- c(
-  'IgD'    = 1.70,
-  'CD1c'   = 1.85,
-  'CD21'   = 1.40,
-  'HLA-DR' = 2.00,
-  'IgG'    = 1.70,
-  'IL-21R' = 1.50,
-  'TACI'   = 1.50,
-  'IgM'    = 1.50,
-  'BAFF-R' = 2.30,
-  'CD10'   = 1.80,
-  'CD23'   = 1.60,
-  'CD32'   = 1.90,
-  'CD40'   = 2.30,
-  'CD85j'  = 1.55,
-  'CD11c'  = 1.75,
-  'CXCR3'  = 2.00,
-  'CXCR5'  = 1.60,
-  'IgA'    = 2.20,
-  'CD27'   = 1.75,
-  'CD19'   = 1.15
+  'CD3'       = 1.60,
+  'CCR5'      = 1.15,
+  'CCR7'      = 1.35,
+  'CD1d-PBS57 tetramer' = 1.60,
+  'CD4'       = 1.50,
+  'CD8a'      = 1.70,
+  'CD16'      = 1.50,
+  'CD27'      = 1.65,
+  'CD28'      = 1.45,
+  'CD38'      = 1.80,
+  'CD45RA'    = 1.70,
+  'CD56'      = 1.70,
+  'CD57'      = 1.50,
+  'CD95'      = 1.50,
+  'CD122'     = 1.85,
+  'CD244'     = 1.50,
+  'CD127'     = 1.40,
+  'CD158'     = 1.85,
+  'CD161'     = 1.35,
+  'CD314'     = 1.70,
+  'CXCR5'     = 1.60,
+  'HLA-DR'    = 1.75,
+  'PD-1'      = 1.50,
+  'TCR Va7_2' = 1.80,
+  'TCR Vd1'   = 1.65,
+  'TCR Vd2'   = 2.30,
+  'TCR Vg9'   = 2.40
 )
-fpath_subset_idcs <- NULL
+fpath_subset_idcs <- '99_SubsetIdcs'
 compensate <- TRUE
 tf <- readRDS('TransformList.RDS')
 tf_cofactor <- 1.
 notrans <- c('^FSC', '^SSC', '^Time')
-signal_limits <- c(-1.0, 4.5)
+signal_limits <- c(-1.0, 4.2)
 
 ## 01_BatchEffect.R ----
 
-normalise <- TRUE
+normalise <- FALSE
 fname_norm_model_precomputed <- NULL
 fpath_fcs_normtrain <- NULL
 train_norm_on_qc <- FALSE
@@ -144,8 +152,8 @@ feature_mapping_batch_size <- 100
 
 ## 03_OutlierAndNoiseDetection.R ----
 
-n_dev <- NULL
-dev_type <- 'mad'
+n_dev <- 20
+dev_type <- 'sd'
 
 ## 04_StatisticalModelling.R ----
 
@@ -156,45 +164,82 @@ confounders <- c('Sex', 'Age')
 
 gating_available <- TRUE
 fname_gating_wsp <- './05_ProfilingWorkspace.wsp'
+
 gate_names <- list(
-  'DN memory B' = c(
-    '/Mature B cell/Class-switched/DN memory/IgM+ Memory',
-    '/Mature B cell/Class-switched/DN memory/IgM+ Memory/IgM_AM',
-    '/Mature B cell/Class-switched/DN memory/IgM+ Memory/IgM_IM',
-    '/Mature B cell/Class-switched/DN memory/IgM+ Memory/IgM_RM',
-    '/Mature B cell/Class-switched/DN memory/IgM+ Memory/IgM_TLM',
-    '/Mature B cell/Class-switched/DN memory/Other memory'
+  'iNKT' = c(
+    '/CD3+/iNKT'
   ),
-  'IgA+ memory B' = c(
-    '/Mature B cell/Class-switched/IgA+ memory',
-    '/Mature B cell/Class-switched/IgA+ memory/IgA_AM',
-    '/Mature B cell/Class-switched/IgA+ memory/IgA_IM',
-    '/Mature B cell/Class-switched/IgA+ memory/IgA_RM',
-    '/Mature B cell/Class-switched/IgA+ memory/IgA_TLM'
+  'Vd1+Vg9+ T' = c(
+    '/CD3+/Non-NKT/Vd1+Vg9+'
   ),
-  'IgG+ memory B' = c(
-    '/Mature B cell/Class-switched/IgG+ memory',
-    '/Mature B cell/Class-switched/IgG+ memory/IgG_AM',
-    '/Mature B cell/Class-switched/IgG+ memory/IgG_IM',
-    '/Mature B cell/Class-switched/IgG+ memory/IgG_RM',
-    '/Mature B cell/Class-switched/IgG+ memory/IgG_TLM'
+  'Vd1+Vg9- T' = c(
+    '/CD3+/Non-NKT/Vd1+Vg9-'
   ),
-  'IgD+CD27+ memory B' = c(
-    '/Mature B cell/IgD+CD27+/IgD-only memory'
+  'Vd1-Vg9+ T' = c(
+    '/CD3+/Non-NKT/Vd1-Vg9+',
+    '/CD3+/Non-NKT/Vd1-Vg9+/Vg9+Vd2-',
+    '/CD3+/Non-NKT/Vd1-Vg9+/Vg9+Vd2dim',
+    '/CD3+/Non-NKT/Vd1-Vg9+/Vg9+Vd2high'
   ),
-  'IgD+CD27+ marginal-zone B' = c(
-    '/Mature B cell/IgD+CD27+/MZ B cells',
-    '/Mature B cell/IgD+CD27+/MZ B cells/CD21+ MZ',
-    '/Mature B cell/IgD+CD27+/MZ B cells/CD21- MZ'
+  'Vd1-Vg9- T' = c(
+    '/CD3+/Non-NKT/Vd1-Vg9-'
   ),
-  'CD21+ naive B' = c(
-    '/Mature B cell/Naive/CD21+ naive'
+  'CD4+ central memory T' = c(
+    '/CD3+/Non-NKT/Vd1-Vg9-/Conventional/CD4+/CD4:CM'
   ),
-  'CD21- naive B' = c(
-    '/Mature B cell/Naive/CD21- naive'
+  'CD4+ effector memory T' = c(
+    '/CD3+/Non-NKT/Vd1-Vg9-/Conventional/CD4+/CD4:EM'
   ),
-  'Transitional B' = c(
-    '/Transitional B cells'
+  'CD4+ naive T' = c(
+    '/CD3+/Non-NKT/Vd1-Vg9-/Conventional/CD4+/CD4:R7+RA+/CD4:Naive'
+  ),
+  'CD4+ stem cell-like memory T' = c(
+    '/CD3+/Non-NKT/Vd1-Vg9-/Conventional/CD4+/CD4:R7+RA+/CD4:TSCM'
+  ),
+  'CD4+ terminal effector T' = c(
+    '/CD3+/Non-NKT/Vd1-Vg9-/Conventional/CD4+/CD4:TE'
+  ),
+  'CD4+CD8+ T' = c(
+    '/CD3+/Non-NKT/Vd1-Vg9-/Conventional/CD4+CD8+'
+  ),
+  'CD4-CD8- T' = c(
+    '/CD3+/Non-NKT/Vd1-Vg9-/Conventional/CD4-CD8-'
+  ),
+  'CD8+ central memory T' = c(
+    '/CD3+/Non-NKT/Vd1-Vg9-/Conventional/CD8+/CD8:CM'
+  ),
+  'CD8+ effector memory T' = c(
+    '/CD3+/Non-NKT/Vd1-Vg9-/Conventional/CD8+/CD8:EM'
+  ),
+  'CD8+ naive T' = c(
+    '/CD3+/Non-NKT/Vd1-Vg9-/Conventional/CD8+/CD8:R7+RA+/CD8:Naive'
+  ),
+  'CD8+ stem cell-like memory T' = c(
+    '/CD3+/Non-NKT/Vd1-Vg9-/Conventional/CD8+/CD8:R7+RA+/CD8:TSCM'
+  ),
+  'CD8+ terminal effector T' = c(
+    '/CD3+/Non-NKT/Vd1-Vg9-/Conventional/CD8+/CD8:TE'
+  ),
+  'MAIT' = c(
+    '/CD3+/Non-NKT/Vd1-Vg9-/MAIT'
+  ),
+  'CD3-' = c(
+    '/CD3-'
+  ),
+  'Early NK' = c(
+    '/CD3-/Early NK'
+  ),
+  'Mature NK' = c(
+    '/CD3-/Mature NK'
+  ),
+  'NK1' = c(
+    '/CD3-/NK1'
+  ),
+  'NK2' = c(
+    '/CD3-/NK2'
+  ),
+  'Terminal NK' = c(
+    '/CD3-/Terminal NK'
   )
 )
 

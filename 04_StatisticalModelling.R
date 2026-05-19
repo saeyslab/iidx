@@ -43,6 +43,25 @@ if (!file.exists(fpath_res04)) {
 inputs <- prep_inputs(
   fname_features_postnorm, fname_sample_outliers, annotation, batch_remove
 )
+# 
+# #########COHORT ADJUST BEGIN
+# 
+# mp <- match(rownames(inputs$counts), annotation$FileName)
+# coh <- annotation$Cohort[mp]
+# fid <- annotation$FamilyID[mp]
+# mask_vrc <- coh=='VRC'
+# mask_twins <- coh=='UK' & (fid%in%unique(fid[duplicated(fid)]))
+# mask_twin1 <- mask_twins & duplicated(fid)
+# mask_twin2 <- mask_twins & !duplicated(fid)
+# 
+# MASK <- mask_twin2|mask_vrc
+# 
+# inputs$counts <- inputs$counts[MASK, ]
+# inputs$percentages <- inputs$percentages[MASK, ]
+# inputs$MFIs <- inputs$MFIs[MASK, ]
+# inputs$PercPos <- inputs$PercPos[MASK, ]
+# 
+# #########COHORT ADJUST END
 
 ## Count number of analysis types to run
 n_out <- 2+(length(thresholds)>0) # DA, DS-MFI, (DS-Pheno)
@@ -55,58 +74,61 @@ message('(1/', n_out, ') Differential Abundance tests')
 res_fsom_da <- test_da(
   counts       = inputs$counts,
   annotation   = annotation,
+  # annotation   = annotation[, colnames(annotation)[colnames(annotation)!='FamilyID']],
   predictors   = predictors,  # potential drivers of DE
   confounders  = confounders, # effects to disentangle from predictors
-  interactions = TRUE,
-  # interactions = FALSE,
-  batch_aware = FALSE,
-  # batch_aware = TRUE,
+  # interactions = TRUE,
+  interactions = FALSE,
+  # batch_aware = FALSE,
+  batch_aware = TRUE,
   verbose      = TRUE
 )
-dir.create('Results_04_StatisticalModelling_Interactions')
-saveRDS(res_fsom_da, sub('Modelling', 'Modelling_Interactions', fname_fsom_da))
-# saveRDS(res_fsom_da, fname_fsom_da)
+# dir.create('Results_04_StatisticalModelling_VRC+TWIN2')
+# saveRDS(res_fsom_da, sub('Modelling', 'Modelling_VRC+TWIN2', fname_fsom_da))
+saveRDS(res_fsom_da, fname_fsom_da)
 
 message('(2/', n_out, ') Differential State (MFI) tests')
 res_fsom_ds_mfi <- test_ds(
   annotation  = annotation,
+  # annotation   = annotation[, colnames(annotation)[colnames(annotation)!='FamilyID']],
   mfi         = inputs$MFIs,
   counts      = inputs$counts,
   predictors  = predictors,    # potential drivers of DE
   confounders = confounders,   # effects to disentangle from predictors
-  interactions = TRUE,
-  # interactions = FALSE,
-  batch_aware = FALSE,
-  # batch_aware = TRUE,
+  # interactions = TRUE,
+  interactions = FALSE,
+  # batch_aware = FALSE,
+  batch_aware = TRUE,
   state_markers =
     as.vector(channels)[idcs_channels_state],
   parallel    = run_parallel,  # (multi-threading gives a big speed-up here)
   verbose     = TRUE
 )
-saveRDS(res_fsom_ds_mfi, sub('Modelling', 'Modelling_Interactions', fname_fsom_ds_mfi))
-# saveRDS(res_fsom_ds_mfi, fname_fsom_ds_mfi)
+# saveRDS(res_fsom_ds_mfi, sub('Modelling', 'Modelling_VRC+TWIN2', fname_fsom_ds_mfi))
+saveRDS(res_fsom_ds_mfi, fname_fsom_ds_mfi)
 
 res_fsom_ds_pheno <- NULL
 if (n_out==3) {
   message('(3/3) Differential State (Phenopositivity) tests')
   res_fsom_ds_pheno <- test_ds( 
     annotation  = annotation,
+    # annotation   = annotation[, colnames(annotation)[colnames(annotation)!='FamilyID']],
     phenopos    = inputs$PercPos,
     counts      = inputs$counts,
     predictors  = predictors,   # potential drivers of DE
     confounders = confounders,  # effects to disentangle from predictors
-    interactions = TRUE,
-    # interactions = FALSE,
-    batch_aware = FALSE,
-    # batch_aware = TRUE,
+    # interactions = TRUE,
+    interactions = FALSE,
+    # batch_aware = FALSE,
+    batch_aware = TRUE,
     state_markers =
       as.vector(channels)[idcs_channels_state],
     parallel    = run_parallel, # (multi-threading gives a big speed-up here)
     verbose     = TRUE
   )
 }
-saveRDS(res_fsom_ds_pheno, sub('Modelling', 'Modelling_Interactions', fname_fsom_ds_pheno))
-# saveRDS(res_fsom_ds_pheno, fname_fsom_ds_pheno)
+# saveRDS(res_fsom_ds_pheno, sub('Modelling', 'Modelling_VRC+TWIN2', fname_fsom_ds_pheno))
+saveRDS(res_fsom_ds_pheno, fname_fsom_ds_pheno)
 
 message(
   '## iidx: 04_StatisticalModelling.R FINISHED ',
