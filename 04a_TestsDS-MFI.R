@@ -112,12 +112,12 @@ ds_mfi_singlefit <- function(
   }
   
   ## Extract fitted parameters for predictor
-  pval  <- summary(fit)$coefficients[, 'Pr(>|t|)'][-1] # p-value
+  pval  <- summary(fit)$coefficients[, 'Pr(>|t|)'][2] # p-value
   coeff <- # effect
     if (batch_aware) {
-      unlist(stats::coef(fit)$Batch[1, -1])
+      unlist(stats::coef(fit)$Batch[1, 2])
     } else {
-      unlist(stats::coef(fit)[[1]][1, -1])
+      unlist(stats::coef(fit)[[1]][1, 2])
     }
   
   ## Gather fitted parameters
@@ -401,3 +401,4 @@ fit_ds_mfi_model <- function(
     # ^ samples excluded due to missing outcome values (per compartment)
   )
 }
+

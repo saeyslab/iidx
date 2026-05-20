@@ -129,11 +129,11 @@ ds_pheno_singlefit <- function(
   ## Extract fitted parameters for predictor
   coeff <- # effect
     if (batch_aware) {
-      unlist(stats::coef(fit)$cond$Batch[1, -1]) 
+      unlist(stats::coef(fit)$cond$Batch[1, 2]) 
     } else {
-      unlist(stats::coef(fit)$cond[[1]][1, -1]) 
+      unlist(stats::coef(fit)$cond[[1]][1, 2]) 
     }
-  pval  <- summary(fit)$coefficients$cond[, 'Pr(>|z|)'][-1] # p-value
+  pval  <- summary(fit)$coefficients$cond[, 'Pr(>|z|)'][2] # p-value
   pval[is.na(pval)] <- 1.
   
   ## Gather fitted parameters
