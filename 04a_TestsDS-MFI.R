@@ -135,7 +135,8 @@ ds_mfi_singlefit <- function(
     'logFCInteraction'   = NA,
     'changeInteraction'  = NA,
     'PValueInteraction'  = NA,
-    'AdjPValInteraction' = NA
+    'AdjPValInteraction' = NA,
+    'nSamples'           = length(y)
   )
   if (wconf) {
     res['PValueConfounder'] <- pval[2]

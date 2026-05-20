@@ -151,7 +151,8 @@ ds_pheno_singlefit <- function(
     'PValueInteraction'  = NA,
     'AdjPValInteraction' = NA,
     'logoddsInteraction' = NA,
-    'oddsInteraction'    = NA
+    'oddsInteraction'    = NA,
+    'nSamples'           = length(y)
   )
   if (wconf) {
     res['PValueConfounder']  <- pval[2]

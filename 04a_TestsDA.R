@@ -202,7 +202,8 @@ da_singlefit <- function(
     'logFCInteraction'   = logfc_inter,
     'FCInteraction'      = fc_inter,
     'PValueInteraction'  = p_inter,
-    'AdjPValInteraction' = NA
+    'AdjPValInteraction' = NA,
+    'nSamples'           = length(samples)
   )
 
   random_intercepts <- batch_rsq <- NA
