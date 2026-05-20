@@ -335,8 +335,13 @@ fit_da_model <- function(
   if (parallel) {
 
     ## Set up parallel processing
-    cores <- detectCores()
-    cl    <- makeCluster(cores[1]-1)
+    cores <- Sys.getenv('IIDX_NCORES')
+    if (cores!='') {
+      cores <- as.numeric(cores)
+    } else {
+      cores <- detectCores()[1]-1
+    }
+    cl <- makeCluster(cores)
     registerDoSNOW(cl)
 
     if (verbose) {
