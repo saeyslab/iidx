@@ -77,6 +77,12 @@ da_singlefit <- function(
 
   ## Build fixed-effects part of formula
   fe <- c(predictor, if (wconf) confounder)
+  extra_covar <- Sys.getenv('IIDX_EXTRA_COVARIATE')
+  if (extra_covar!='') {
+    fe <- c(fe, extra_covar)
+  } else {
+    extra_covar <- NULL
+  }
 
   ## Construct full-model formula
   rhs_full <- paste(
@@ -148,7 +154,7 @@ da_singlefit <- function(
     if (is.na(p_conf)) { p_conf <- 1. }
 
     ## Extract log2FC for confounder
-    coef_conf  <- tail(glmmTMB::fixef(fit_full)$cond, 1)
+    coef_conf  <- glmmTMB::fixef(fit_full)$cond[3]
     logfc_conf <- coef_conf/log(2)
     fc_conf    <- sign(logfc_conf)*(2^abs(logfc_conf))
 
