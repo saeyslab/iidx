@@ -155,9 +155,16 @@ ds_pheno_singlefit <- function(
     'nSamples'           = length(y)
   )
   if (wconf) {
-    res['PValueConfounder']  <- pval[2]
-    res['logoddsConfounder'] <- coeff[2]
-    res['oddsConfounder']    <- exp(coeff[2])
+    pval_conf <- summary(fit)$coefficients$cond[, 'Pr(>|z|)'][3]
+    coeff_conf <-
+      if (batch_aware) {
+        unlist(stats::coef(fit)$cond$Batch[1, 3]) 
+      } else {
+        unlist(stats::coef(fit)$cond[[1]][1, 3]) 
+      }
+    res['PValueConfounder']  <- pval_conf
+    res['logoddsConfounder'] <- coeff_conf
+    res['oddsConfounder']    <- exp(coeff_conf)
   }
   
   random_intercepts <- batch_rsq <- NA

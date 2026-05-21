@@ -123,9 +123,9 @@ ds_mfi_singlefit <- function(
   ## Gather fitted parameters
   res <- data.frame(
     'Compartment'        = comp,
-    'logFC'              = sign(coeff[1])*log2(1+abs(coeff[1])),
-    'change'             = coeff[1],
-    'PValue'             = pval[1],
+    'logFC'              = sign(coeff)*log2(1+abs(coeff)),
+    'change'             = coeff,
+    'PValue'             = pval,
     'AdjPVal'            = NA,
     'Rsq'                = rsq,
     'logFCConfounder'    = NA,
@@ -139,9 +139,16 @@ ds_mfi_singlefit <- function(
     'nSamples'           = length(y)
   )
   if (wconf) {
-    res['PValueConfounder'] <- pval[2]
-    res['logFCConfounder']  <- sign(coeff[2])*log2(1+abs(coeff[2]))
-    res['changeConfounder'] <- coeff[2]
+    pval_conf <- summary(fit)$coefficients[, 'Pr(>|t|)'][3]
+    coeff_conf <-
+      if (batch_aware) {
+        unlist(stats::coef(fit)$Batch[1, 3])
+      } else {
+        unlist(stats::coef(fit)[[1]][1, 3])
+      }
+    res['PValueConfounder'] <- pval_conf
+    res['changeConfounder'] <- coeff_conf
+    res['logFCConfounder']  <- sign(coeff_conf)*log2(1+abs(coeff_conf))
   }
   rownames(res) <- NULL
   
