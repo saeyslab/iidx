@@ -213,6 +213,8 @@ ds_pheno_singlefit <- function(
     res['logoddsInteraction'] <- coeff_inter
   }
   
+  attributes(res)$samples <- samples
+  
   list(
     'res'               = res,
     'random_intercepts' = random_intercepts,

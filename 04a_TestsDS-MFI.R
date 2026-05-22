@@ -197,6 +197,8 @@ ds_mfi_singlefit <- function(
     res['changeInteraction'] <- coeff_inter
   }
   
+  attributes(res)$samples <- samples
+  
   list(
     'res'               = res,
     'random_intercepts' = random_intercepts,
