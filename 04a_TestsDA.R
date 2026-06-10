@@ -77,12 +77,6 @@ da_singlefit <- function(
 
   ## Build fixed-effects part of formula
   fe <- c(predictor, if (wconf) confounder)
-  extra_covar <- Sys.getenv('IIDX_EXTRA_COVARIATE')
-  if (extra_covar!='') {
-    fe <- c(fe, extra_covar)
-  } else {
-    extra_covar <- NULL
-  }
 
   ## Construct full-model formula
   rhs_full <- paste(
@@ -154,7 +148,7 @@ da_singlefit <- function(
     if (is.na(p_conf)) { p_conf <- 1. }
 
     ## Extract log2FC for confounder
-    coef_conf  <- glmmTMB::fixef(fit_full)$cond[3]
+    coef_conf  <- glmmTMB::fixef(fit_full)$cond[confounder]
     logfc_conf <- coef_conf/log(2)
     fc_conf    <- sign(logfc_conf)*(2^abs(logfc_conf))
 
@@ -202,8 +196,7 @@ da_singlefit <- function(
     'logFCInteraction'   = logfc_inter,
     'FCInteraction'      = fc_inter,
     'PValueInteraction'  = p_inter,
-    'AdjPValInteraction' = NA,
-    'nSamples'           = length(samples)
+    'AdjPValInteraction' = NA
   )
 
   random_intercepts <- batch_rsq <- NA
@@ -324,8 +317,8 @@ fit_da_model <- function(
   comps  <- rownames(counts)
   ncomps <- length(comps)
 
-  ## Calculate TMM normalisation factors (via edgeR; used as offset)
-  nf <- edgeR::calcNormFactors(counts, method = 'TMM')
+  ## Calculate effective library sizes usign TMM
+  nf <- edgeR::calcNormFactors(counts, method = 'TMM')*colSums(counts)
 
   ## Gather batch levels
   batches  <- if (batch_aware) levels(experiment$Data$Batch) else character(0)
@@ -335,13 +328,8 @@ fit_da_model <- function(
   if (parallel) {
 
     ## Set up parallel processing
-    cores <- Sys.getenv('IIDX_NCORES')
-    if (cores!='') {
-      cores <- as.numeric(cores)
-    } else {
-      cores <- detectCores()[1]-1
-    }
-    cl <- makeCluster(cores)
+    cores <- detectCores()
+    cl    <- makeCluster(cores[1]-1)
     registerDoSNOW(cl)
 
     if (verbose) {
@@ -431,4 +419,3 @@ fit_da_model <- function(
     'na_annotation'     = na_annotation
   )
 }
-
