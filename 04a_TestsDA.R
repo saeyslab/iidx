@@ -121,7 +121,7 @@ da_singlefit <- function(
     )
   }))
   lrt_pred <- stats::anova(fit_nopred, fit_full)
-  pmask <- str_detect(names(glmmTMB::fixef(fit_full)$cond), predictor)
+  pmask <- stringr::str_detect(names(glmmTMB::fixef(fit_full)$cond), predictor)
   pname <- names(glmmTMB::fixef(fit_full)$cond)[pmask]
   p        <- lrt_pred$`Pr(>Chisq)`[2]
   if (is.na(p)) { p <- 1. }
@@ -356,7 +356,7 @@ fit_da_model <- function(
       .inorder      = TRUE,
       .options.snow = opts,
       .export       = c('da_singlefit'),
-      .packages     = c('glmmTMB', 'lme4', 'edgeR')
+      .packages     = c('glmmTMB', 'lme4', 'edgeR', 'stringr')
     ) %dopar% {
       da_singlefit(
         comps, idx_comp, counts, nf, experiment,
