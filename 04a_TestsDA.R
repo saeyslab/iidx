@@ -121,6 +121,8 @@ da_singlefit <- function(
     )
   }))
   lrt_pred <- stats::anova(fit_nopred, fit_full)
+  pmask <- str_detect(names(glmmTMB::fixef(fit_full)$cond), predictor)
+  pname <- names(glmmTMB::fixef(fit_full)$cond)[pmask]
   p        <- lrt_pred$`Pr(>Chisq)`[2]
   if (is.na(p)) { p <- 1. }
   
@@ -148,7 +150,9 @@ da_singlefit <- function(
     if (is.na(p_conf)) { p_conf <- 1. }
     
     ## Extract log2FC for confounder
-    coef_conf  <- glmmTMB::fixef(fit_full)$cond[confounder]
+    cmask <- str_detect(names(glmmTMB::fixef(fit_full)$cond), confounder)
+    cname <- names(glmmTMB::fixef(fit_full)$cond)[cmask]
+    coef_conf  <- glmmTMB::fixef(fit_full)$cond[cname]
     logfc_conf <- coef_conf/log(2)
     fc_conf    <- sign(logfc_conf)*(2^abs(logfc_conf))
     
