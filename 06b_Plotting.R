@@ -856,13 +856,13 @@ plot_batch_stats <- function(
   
   ## Extract fitted model parameters
   if (type=='Differential Abundance') {
-
+    
     ## Axis labels for DA batch-intercept and goodness-of-fit plots
     lab_yaxis_ri  <- paste0(comp, ' (% of cells)\n(batch intercept)')
     lab_yaxis_rsq <- 'batch-level R<sup>2</sup> estimate'
-
+    
     if (wconf) { # confounder specified
-
+      
       ## Extract predictor and confounder effects from joint model
       x_joint    <- res$confounders_joint[[predictor]][[confounder]]
       idx_comp   <- x_joint$Compartment==comp
@@ -870,14 +870,14 @@ plot_batch_stats <- function(
       ch_conf    <- x_joint$logFCConfounder[idx_comp]
       p_pred     <- x_joint$AdjPVal[idx_comp]
       p_conf     <- x_joint$AdjPValConfounder[idx_comp]
-
+      
       ## Extract batch random intercepts with confidence intervals
       x_ri       <- res$confounders_random_intercepts[[predictor]][[confounder]]
       ri_avg     <- x_ri$Intercept[x_ri$Compartment==comp]
       ri_min     <- x_ri$ConfidenceIntervalMin[x_ri$Compartment==comp]
       ri_max     <- x_ri$ConfidenceIntervalMax[x_ri$Compartment==comp]
       batches    <- x_ri$Batch[x_ri$Compartment==comp]
-
+      
       ## Normalise intercepts to % of cells: divide by sum across metaclusters
       ##   per batch (preserves asymmetry of exp-transformed CI bounds)
       batch_totals <- tapply(x_ri$Intercept, x_ri$Batch, sum)
@@ -889,22 +889,22 @@ plot_batch_stats <- function(
         'CIMin' = ri_min/ri_scaler*100,
         'CIMax' = ri_max/ri_scaler*100
       )
-
-      ## Extract overall and batch-wise R^2
-      x_rsq  <- x_joint[, c('Compartment', 'Rsq')]
-      d_rsq  <- data.frame(
-        'Batch' = as.factor('Joint'),
-        'Rsq'   = x_rsq$Rsq[x_rsq$Compartment==comp]
-      )
-      x_brsq <- res$confounders_batch_r_squared[[predictor]][[confounder]]
-      d_brsq <- data.frame(
-        'Label'    = factor(batches, levels = batches),
-        'Batch'    = factor(batches, levels = batches),
-        'BatchRsq' = x_brsq$Rsq[x_brsq$Compartment==comp]
-      )
-
+      
+      # ## Extract overall and batch-wise R^2
+      # x_rsq  <- x_joint[, c('Compartment', 'Rsq')]
+      # d_rsq  <- data.frame(
+      #   'Batch' = as.factor('Joint'),
+      #   'Rsq'   = x_rsq$Rsq[x_rsq$Compartment==comp]
+      # )
+      # x_brsq <- res$confounders_batch_r_squared[[predictor]][[confounder]]
+      # d_brsq <- data.frame(
+      #   'Label'    = factor(batches, levels = batches),
+      #   'Batch'    = factor(batches, levels = batches),
+      #   'BatchRsq' = x_brsq$Rsq[x_brsq$Compartment==comp]
+      # )
+      
     } else { # no confounder specified
-
+      
       ## Extract predictor effect from joint model
       x_joint    <- res$joint[[predictor]]
       idx_comp   <- x_joint$Compartment==comp
@@ -912,14 +912,14 @@ plot_batch_stats <- function(
       ch_conf    <- NA
       p_pred     <- x_joint$AdjPVal[idx_comp]
       p_conf     <- NA
-
+      
       ## Extract batch random intercepts with confidence intervals
       x_ri       <- res$random_intercepts[[predictor]]
       ri_avg     <- x_ri$Intercept[x_ri$Compartment==comp]
       ri_min     <- x_ri$ConfidenceIntervalMin[x_ri$Compartment==comp]
       ri_max     <- x_ri$ConfidenceIntervalMax[x_ri$Compartment==comp]
       batches    <- x_ri$Batch[x_ri$Compartment==comp]
-
+      
       ## Normalise intercepts to % of cells: divide by sum across metaclusters
       ##   per batch (preserves asymmetry of exp-transformed CI bounds)
       batch_totals <- tapply(x_ri$Intercept, x_ri$Batch, sum)
@@ -931,21 +931,21 @@ plot_batch_stats <- function(
         'CIMin' = ri_min/ri_scaler*100,
         'CIMax' = ri_max/ri_scaler*100
       )
-
-      ## Extract overall and batch-wise R^2
-      x_rsq  <- x_joint[, c('Compartment', 'Rsq')]
-      d_rsq  <- data.frame(
-        'Batch' = as.factor('Joint'),
-        'Rsq'   = x_rsq$Rsq[x_rsq$Compartment==comp]
-      )
-      x_brsq <- res$batch_r_squared[[predictor]]
-      d_brsq <- data.frame(
-        'Label'    = factor(batches, levels = batches),
-        'Batch'    = factor(batches, levels = batches),
-        'BatchRsq' = x_brsq$Rsq[x_brsq$Compartment==comp]
-      )
+      
+      # ## Extract overall and batch-wise R^2
+      # x_rsq  <- x_joint[, c('Compartment', 'Rsq')]
+      # d_rsq  <- data.frame(
+      #   'Batch' = as.factor('Joint'),
+      #   'Rsq'   = x_rsq$Rsq[x_rsq$Compartment==comp]
+      # )
+      # x_brsq <- res$batch_r_squared[[predictor]]
+      # d_brsq <- data.frame(
+      #   'Label'    = factor(batches, levels = batches),
+      #   'Batch'    = factor(batches, levels = batches),
+      #   'BatchRsq' = x_brsq$Rsq[x_brsq$Compartment==comp]
+      # )
     }
-
+    
     ## Generate plot of batch random intercepts with 95% CI
     p_ri <-
       ggplot2::ggplot(
@@ -975,52 +975,52 @@ plot_batch_stats <- function(
         axis.title.y    = ggplot2::element_text(size = 10)
       ) +
       ggplot2::ggtitle('Batch-level intercepts')
-
-    ## Generate plot of batch-wise R^2 goodness-of-fit
-    p_brsq <-
-      ggplot2::ggplot(
-        data    = d_brsq,
-        mapping = ggplot2::aes(
-          x   = .data$Label,
-          y   = .data$BatchRsq,
-          col = .data$Batch
-        )
-      ) +
-      ggplot2::geom_hline( # overall R^2 reference line
-        yintercept = d_rsq$Rsq,
-        lwd        = 0.6,
-        linetype   = 2,
-        col        = 'darkgrey'
-      ) +
-      ggplot2::geom_hline( # R^2 = 0 reference line
-        yintercept = 0,
-        lwd        = 0.6,
-        linetype   = 1,
-        col        = '#2b2b2b'
-      ) +
-      ggplot2::geom_segment(
-        mapping = ggplot2::aes(
-          x    = .data$Label,
-          xend = .data$Label,
-          y    = 0.,
-          yend = .data$BatchRsq
-        )
-      ) +
-      ggplot2::geom_point(
-        mapping = ggplot2::aes(y = .data$BatchRsq)
-      ) +
-      ggplot2::xlab('Batch') +
-      ggplot2::ylab(lab_yaxis_rsq) +
-      ggplot2::theme_minimal() +
-      ggplot2::theme(
-        legend.position = 'none',
-        axis.text.x     = ggplot2::element_text(
-          angle = 0, vjust = 0.5, hjust = .5, size = 10
-        ),
-        axis.title.y    = ggtext::element_markdown(size = 10)
-      ) +
-      ggplot2::ggtitle('Batch-level goodness-of-fit')
-
+    
+    # ## Generate plot of batch-wise R^2 goodness-of-fit
+    # p_brsq <-
+    #   ggplot2::ggplot(
+    #     data    = d_brsq,
+    #     mapping = ggplot2::aes(
+    #       x   = .data$Label,
+    #       y   = .data$BatchRsq,
+    #       col = .data$Batch
+    #     )
+    #   ) +
+    #   ggplot2::geom_hline( # overall R^2 reference line
+    #     yintercept = d_rsq$Rsq,
+    #     lwd        = 0.6,
+    #     linetype   = 2,
+    #     col        = 'darkgrey'
+    #   ) +
+    #   ggplot2::geom_hline( # R^2 = 0 reference line
+    #     yintercept = 0,
+    #     lwd        = 0.6,
+    #     linetype   = 1,
+    #     col        = '#2b2b2b'
+    #   ) +
+    #   ggplot2::geom_segment(
+    #     mapping = ggplot2::aes(
+    #       x    = .data$Label,
+    #       xend = .data$Label,
+    #       y    = 0.,
+    #       yend = .data$BatchRsq
+    #     )
+    #   ) +
+    #   ggplot2::geom_point(
+    #     mapping = ggplot2::aes(y = .data$BatchRsq)
+    #   ) +
+    #   ggplot2::xlab('Batch') +
+    #   ggplot2::ylab(lab_yaxis_rsq) +
+    #   ggplot2::theme_minimal() +
+    #   ggplot2::theme(
+    #     legend.position = 'none',
+    #     axis.text.x     = ggplot2::element_text(
+    #       angle = 0, vjust = 0.5, hjust = .5, size = 10
+    #     ),
+    #     axis.title.y    = ggtext::element_markdown(size = 10)
+    #   ) +
+    #   ggplot2::ggtitle('Batch-level goodness-of-fit')
+    
     ## Resolve predictor and confounder labels for effects panel
     if (cont) {
       pred_title <- predictor
@@ -1029,7 +1029,7 @@ plot_batch_stats <- function(
         predictor, ' (', levels(as.factor(annotation[, predictor]))[2], ')'
       )
     }
-
+    
     ## Collect predictor (and optional confounder) effect stats
     effects_vals <- c(ch_pred, if (wconf) ch_conf)
     effects_p    <- c(p_pred, if (wconf) p_conf)
@@ -1044,7 +1044,7 @@ plot_batch_stats <- function(
       }
       effects_labs <- c(effects_labs, conf_title)
     }
-
+    
     d_eff <- data.frame(
       'Effect'    = as.factor(effects_labs),
       'LabelType' = as.factor(c(
@@ -1058,7 +1058,7 @@ plot_batch_stats <- function(
       'Asterisks' = sig_asterisks(effects_p),
       'Signif'    = effects_p<.05
     )
-
+    
     ## Generate effects panel (p-values and directions)
     p_eff <-
       ggplot2::ggplot(
@@ -1100,15 +1100,16 @@ plot_batch_stats <- function(
         axis.title.x     = ggplot2::element_blank(),
         axis.title.y     = ggplot2::element_blank()
       )
-
+    
     ## Combine intercept, goodness-of-fit, and effects panels
     p <- cowplot::plot_grid(
-      cowplot::plot_grid(p_ri, p_brsq, nrow = 2),
+      # cowplot::plot_grid(p_ri, p_brsq, nrow = 2),
+      p_ri,
       p_eff,
       ncol       = 2,
       rel_widths = c(length(batches)/2, 3)
     )
-
+    
   } else { # DS-MFI or DS-Pheno results
     
     ## Resolve outcome and axis labels
@@ -1173,20 +1174,20 @@ plot_batch_stats <- function(
         'CIMax'   = ri_max_pred
       )
       
-      ## Extract batch-level R-squared estimates
-      x_rsq <-
-        res$confounders_main[[predictor]][[confounder]][, c('Compartment', 'Rsq')]
-      d_rsq <- data.frame(
-        'Batch' = as.factor('Joint'),
-        'Rsq'   = x_rsq[, 'Rsq'][x_rsq$Compartment==comp]
-      )
-      x_brsq <-
-        res$confounders_batch_r_squared[[predictor]][[confounder]]
-      d_brsq <- data.frame(
-        'Label'    = factor(batches, levels = batches),
-        'Batch'    = factor(batches, levels = batches),
-        'BatchRsq' = x_brsq$Rsq[x_brsq$Compartment==comp]
-      )
+      # ## Extract batch-level R-squared estimates
+      # x_rsq <-
+      #   res$confounders_main[[predictor]][[confounder]][, c('Compartment', 'Rsq')]
+      # d_rsq <- data.frame(
+      #   'Batch' = as.factor('Joint'),
+      #   'Rsq'   = x_rsq[, 'Rsq'][x_rsq$Compartment==comp]
+      # )
+      # x_brsq <-
+      #   res$confounders_batch_r_squared[[predictor]][[confounder]]
+      # d_brsq <- data.frame(
+      #   'Label'    = factor(batches, levels = batches),
+      #   'Batch'    = factor(batches, levels = batches),
+      #   'BatchRsq' = x_brsq$Rsq[x_brsq$Compartment==comp]
+      # )
       
       ## Generate plot of random intercept ranges per batch
       p_ri <-
@@ -1225,56 +1226,56 @@ plot_batch_stats <- function(
           'Batch-level intercepts'
         )
       
-      ## Generage plot of R-squared estimates per batch
-      p_brsq <- ggplot2::ggplot(
-        data    = d_brsq,
-        mapping = ggplot2::aes(
-          x   = .data$Label,
-          y   = .data$BatchRsq,
-          col = .data$Batch
-        )
-      ) +
-        ggplot2::geom_hline( # overall R^2 value line
-          yintercept = d_rsq$Rsq,
-          lwd        = 0.6,
-          linetype   = 2,
-          col        = 'darkgrey'
-        ) +
-        ggplot2::geom_hline( # R^2~0 line
-          yintercept = 0,
-          lwd        = 0.6,
-          linetype   = 1,
-          col        = '#2b2b2b'
-        ) +
-        ggplot2::geom_segment(
-          mapping = ggplot2::aes(
-            x    = .data$Label,
-            xend = .data$Label,
-            y    = .data$BatchRsq,
-            yend = 0.
-          )
-        ) +
-        ggplot2::geom_point(
-          mapping = ggplot2::aes(y = .data$BatchRsq)
-        ) +
-        ggplot2::xlab(
-          'Batch'
-        ) + 
-        ggplot2::ylab(
-          lab_yaxis_rsq
-        ) +
-        ggplot2::theme_minimal(
-        ) +
-        ggplot2::theme(
-          legend.position = 'none',
-          axis.text.x = ggplot2::element_text(
-            angle = 0, vjust = 0.5, hjust = .5, size = 10
-          ),
-          axis.title.y = ggtext::element_markdown(size = 10)
-        ) +
-        ggplot2::ggtitle(
-          'Batch-level goodness-of-fit'
-        )
+      # ## Generage plot of R-squared estimates per batch
+      # p_brsq <- ggplot2::ggplot(
+      #   data    = d_brsq,
+      #   mapping = ggplot2::aes(
+      #     x   = .data$Label,
+      #     y   = .data$BatchRsq,
+      #     col = .data$Batch
+      #   )
+      # ) +
+      #   ggplot2::geom_hline( # overall R^2 value line
+      #     yintercept = d_rsq$Rsq,
+      #     lwd        = 0.6,
+      #     linetype   = 2,
+      #     col        = 'darkgrey'
+      #   ) +
+      #   ggplot2::geom_hline( # R^2~0 line
+      #     yintercept = 0,
+      #     lwd        = 0.6,
+      #     linetype   = 1,
+      #     col        = '#2b2b2b'
+      #   ) +
+      #   ggplot2::geom_segment(
+      #     mapping = ggplot2::aes(
+      #       x    = .data$Label,
+      #       xend = .data$Label,
+      #       y    = .data$BatchRsq,
+      #       yend = 0.
+      #     )
+      #   ) +
+      #   ggplot2::geom_point(
+      #     mapping = ggplot2::aes(y = .data$BatchRsq)
+      #   ) +
+      #   ggplot2::xlab(
+      #     'Batch'
+      #   ) + 
+      #   ggplot2::ylab(
+      #     lab_yaxis_rsq
+      #   ) +
+      #   ggplot2::theme_minimal(
+      #   ) +
+      #   ggplot2::theme(
+      #     legend.position = 'none',
+      #     axis.text.x = ggplot2::element_text(
+      #       angle = 0, vjust = 0.5, hjust = .5, size = 10
+      #     ),
+      #     axis.title.y = ggtext::element_markdown(size = 10)
+      #   ) +
+      #   ggplot2::ggtitle(
+      #     'Batch-level goodness-of-fit'
+      #   )
       
       ## Resolve predictor and confounder titles
       if (cont) { # continuous predictor
@@ -1368,11 +1369,12 @@ plot_batch_stats <- function(
       
       ## Combine RI, goodness-of-fit and predictor-vs-confounder plots
       p <- cowplot::plot_grid(
-        cowplot::plot_grid(
-          p_ri,
-          p_brsq,
-          nrow = 2
-        ),
+        # cowplot::plot_grid(
+        #   p_ri,
+        #   p_brsq,
+        #   nrow = 2
+        # ),
+        p_ri,
         p_eff,
         ncol = 2,
         rel_widths = c(length(batches)/2, 3)
@@ -1410,18 +1412,18 @@ plot_batch_stats <- function(
         'CIMax'   = ri_max_pred
       )
       
-      ## Extract batch-level R-squared estimates
-      x_rsq <- res$main[[predictor]][, c('Compartment', 'Rsq')]
-      d_rsq <- data.frame(
-        'Batch' = as.factor('Joint'),
-        'Rsq'   = x_rsq[, 'Rsq'][x_rsq$Compartment==comp]
-      )
-      x_brsq <- res$batch_r_squared[[predictor]]
-      d_brsq <- data.frame(
-        'Label'    = factor(batches, levels = batches),
-        'Batch'    = factor(batches, levels = batches),
-        'BatchRsq' = x_brsq$Rsq[x_brsq$Compartment==comp]
-      )
+      # ## Extract batch-level R-squared estimates
+      # x_rsq <- res$main[[predictor]][, c('Compartment', 'Rsq')]
+      # d_rsq <- data.frame(
+      #   'Batch' = as.factor('Joint'),
+      #   'Rsq'   = x_rsq[, 'Rsq'][x_rsq$Compartment==comp]
+      # )
+      # x_brsq <- res$batch_r_squared[[predictor]]
+      # d_brsq <- data.frame(
+      #   'Label'    = factor(batches, levels = batches),
+      #   'Batch'    = factor(batches, levels = batches),
+      #   'BatchRsq' = x_brsq$Rsq[x_brsq$Compartment==comp]
+      # )
       
       ## Generate plot of random intercept ranges per batch
       p_ri <- ggplot2::ggplot(
@@ -1461,62 +1463,63 @@ plot_batch_stats <- function(
           'Batch-level intercepts'
         )
       
-      ## Generage plot of R-squared estimates per batch
-      p_brsq <-
-        ggplot2::ggplot(
-          data = d_brsq,
-          mapping = ggplot2::aes(
-            x   = .data$Label,
-            y   = .data$BatchRsq,
-            col = .data$Batch
-          )
-        ) +
-        ggplot2::geom_hline( # overall R^2 value line
-          yintercept = d_rsq$Rsq,
-          lwd        = 0.6,
-          linetype   = 2,
-          col        = 'darkgrey'
-        ) +
-        ggplot2::geom_hline( # R^2~0 line
-          yintercept = 0,
-          lwd        = 0.6,
-          linetype   = 1,
-          col        = '#2b2b2b'
-        ) +
-        ggplot2::geom_segment(
-          mapping = ggplot2::aes(
-            x    = .data$Label,
-            xend = .data$Label,
-            y    = 0.,
-            yend = .data$BatchRsq
-          )
-        ) +
-        ggplot2::geom_point(
-          mapping = ggplot2::aes(
-            y = .data$BatchRsq
-          )
-        ) +
-        ggplot2::xlab(
-          'Batch'
-        ) + 
-        ggplot2::ylab(
-          lab_yaxis_rsq
-        ) +
-        ggplot2::theme_minimal(
-        ) +
-        ggplot2::theme(
-          legend.position = 'none',
-          axis.text.x = ggplot2::element_text(
-            angle = 0, vjust = 0.5, hjust = .5, size = 10
-          ),
-          axis.title.y = ggtext::element_markdown(size = 10)
-        ) +
-        ggplot2::ggtitle(
-          'Batch-level goodness-of-fit'
-        )
+      # ## Generage plot of R-squared estimates per batch
+      # p_brsq <-
+      #   ggplot2::ggplot(
+      #     data = d_brsq,
+      #     mapping = ggplot2::aes(
+      #       x   = .data$Label,
+      #       y   = .data$BatchRsq,
+      #       col = .data$Batch
+      #     )
+      #   ) +
+      #   ggplot2::geom_hline( # overall R^2 value line
+      #     yintercept = d_rsq$Rsq,
+      #     lwd        = 0.6,
+      #     linetype   = 2,
+      #     col        = 'darkgrey'
+      #   ) +
+      #   ggplot2::geom_hline( # R^2~0 line
+      #     yintercept = 0,
+      #     lwd        = 0.6,
+      #     linetype   = 1,
+      #     col        = '#2b2b2b'
+      #   ) +
+      #   ggplot2::geom_segment(
+      #     mapping = ggplot2::aes(
+      #       x    = .data$Label,
+      #       xend = .data$Label,
+      #       y    = 0.,
+      #       yend = .data$BatchRsq
+      #     )
+      #   ) +
+      #   ggplot2::geom_point(
+      #     mapping = ggplot2::aes(
+      #       y = .data$BatchRsq
+      #     )
+      #   ) +
+      #   ggplot2::xlab(
+      #     'Batch'
+      #   ) + 
+      #   ggplot2::ylab(
+      #     lab_yaxis_rsq
+      #   ) +
+      #   ggplot2::theme_minimal(
+      #   ) +
+      #   ggplot2::theme(
+      #     legend.position = 'none',
+      #     axis.text.x = ggplot2::element_text(
+      #       angle = 0, vjust = 0.5, hjust = .5, size = 10
+      #     ),
+      #     axis.title.y = ggtext::element_markdown(size = 10)
+      #   ) +
+      #   ggplot2::ggtitle(
+      #     'Batch-level goodness-of-fit'
+      #   )
       
-      ## Combine RI and goodness-of-fit plots
-      p <- cowplot::plot_grid(p_ri, p_brsq, nrow = 2)
+      # ## Combine RI and goodness-of-fit plots
+      # p <- cowplot::plot_grid(p_ri, p_brsq, nrow = 2)
+      p <- p_ri
     }
   }
   p
@@ -2147,4 +2150,6 @@ plot_comp_quartiles <- function(
     )
   p
 }
+
+
 
